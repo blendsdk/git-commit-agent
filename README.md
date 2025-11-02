@@ -74,7 +74,9 @@ echo OPENAI_API_KEY=your_key_here > %USERPROFILE%\.agent-config
 
 ## Usage
 
-### Basic Usage
+### Command Line Usage
+
+After installation, the `git-commit-agent` command will be available globally:
 
 ```bash
 # Navigate to your git repository
@@ -83,10 +85,36 @@ cd your-project
 # Make some changes
 # ... edit files ...
 
-# Run the agent
+# Run the agent from anywhere
+git-commit-agent
+```
+
+### Testing Local Installation
+
+Before publishing, you can test the CLI locally:
+
+```bash
+# Link the package globally
+npm link
+# or
+yarn link
+
+# Now test the command from any directory
+cd /path/to/any/git/repo
 git-commit-agent
 
-# Or if installed from source
+# When done testing, unlink
+npm unlink -g @blendsdk/git-commit-agent
+# or
+yarn unlink @blendsdk/git-commit-agent
+```
+
+### Running from Source
+
+If you're developing or haven't installed globally:
+
+```bash
+# From the project directory
 yarn start
 ```
 

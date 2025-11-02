@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { ChatOpenAI } from "@langchain/openai";
 import dotenv from "dotenv";
 import { execa } from "execa";
