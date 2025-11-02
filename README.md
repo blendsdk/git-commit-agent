@@ -9,7 +9,6 @@ AI-powered git commit message generator using LangChain and OpenAI. Automaticall
 - 🔍 **Smart Detection** - Identifies commit type, scope, and impact
 - 🛡️ **Error Handling** - Comprehensive error handling with recovery suggestions (enhanced version)
 - 🌍 **Global Configuration** - Support for user-wide settings via `~/.env-git-agent`
-- 🐳 **Docker Support** - Run in containers with GitHub Container Registry
 - 🚀 **CI/CD Ready** - GitHub Actions workflow for automated builds and releases
 
 ## Installation
@@ -39,18 +38,6 @@ yarn build
 
 # Run
 yarn start
-```
-
-### Option 3: Docker
-
-```bash
-# Pull from GitHub Container Registry
-docker pull ghcr.io/yourusername/git-commit-agent:latest
-
-# Run with your repository mounted
-docker run -v $(pwd):/repo -w /repo \
-  -e OPENAI_API_KEY=your_key_here \
-  ghcr.io/yourusername/git-commit-agent:latest
 ```
 
 ## Configuration
@@ -187,7 +174,6 @@ git-commit-agent/
 ├── .github/
 │   └── workflows/
 │       └── build-and-release.yml  # CI/CD pipeline
-├── Dockerfile                # Container configuration
 ├── package.json              # Project metadata and scripts
 ├── tsconfig.json            # TypeScript configuration
 ├── ENHANCEMENTS.md          # Technical documentation
@@ -224,7 +210,7 @@ The project includes a GitHub Actions workflow that:
 
 1. **Build & Test** - Runs on Node 18.x and 20.x
 2. **Release** - Creates GitHub releases on version tags
-3. **Docker** - Builds and pushes Docker images to GHCR
+3. **NPM Publishing** - Optional automated publishing to NPM
 
 ### Creating a Release
 
@@ -236,37 +222,17 @@ git push origin v1.0.0
 # GitHub Actions will automatically:
 # - Build the project
 # - Run tests
-# - Create a GitHub release
-# - Build and push Docker image
+# - Create a GitHub release with artifacts
 # - (Optional) Publish to NPM
 ```
 
-## Docker Usage
+### Publishing to NPM
 
-### Build Locally
+To enable automatic NPM publishing:
 
-```bash
-docker build -t git-commit-agent .
-```
-
-### Run with Docker
-
-```bash
-# Basic usage
-docker run -v $(pwd):/repo -w /repo \
-  -e OPENAI_API_KEY=$OPENAI_API_KEY \
-  git-commit-agent
-
-# With global config
-docker run -v $(pwd):/repo -w /repo \
-  -v ~/.env-git-agent:/root/.env-git-agent:ro \
-  git-commit-agent
-
-# Interactive mode
-docker run -it -v $(pwd):/repo -w /repo \
-  -e OPENAI_API_KEY=$OPENAI_API_KEY \
-  git-commit-agent /bin/sh
-```
+1. Add `NPM_TOKEN` secret to your GitHub repository
+2. Uncomment the publish line in `.github/workflows/build-and-release.yml`
+3. Push a version tag to trigger the release
 
 ## Troubleshooting
 
