@@ -102,6 +102,12 @@ Use the:
 Ensure the commit message adheres to conventional commit standards, providing clarity on what changes were made
 and why. The commit message should be detailed enough for future reference.
 
+# COMMIT MESSAGE GUIDELINES
+- Use conventional commit format (type(scope): subject).
+- Include a detailed description of changes.
+- Mention any related issues or tickets if applicable.
+- Ensure clarity and conciseness.
+
 # RESPONSE FORMAT
 Provide the response in the following JSON format:
 
