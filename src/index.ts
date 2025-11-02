@@ -153,7 +153,7 @@ async function executeGitCommand(
 
 const git_status_tool = tool(
     async (): Promise<string> => {
-        console.log("Executing git status...");
+        console.log("Running the git_status_tool");
 
         try {
             await validateGitRepo();
@@ -243,7 +243,7 @@ const git_status_tool = tool(
 
 const git_diff_tool = tool(
     async ({ files }: { files?: string[] }): Promise<string> => {
-        console.log("Executing git diff...");
+        console.log("Running the git_diff_tool", { files });
 
         try {
             await validateGitRepo();
@@ -327,7 +327,7 @@ const git_diff_tool = tool(
 
 const git_add_tool = tool(
     async ({ files, all }: { files?: string[]; all?: boolean }): Promise<string> => {
-        console.log("Executing git add...");
+        console.log("Running the git_add_tool", { files, all });
 
         try {
             await validateGitRepo();
@@ -412,7 +412,7 @@ const git_add_tool = tool(
 
 const git_commit_tool = tool(
     async ({ commit_message, validate }: { commit_message: string; validate?: boolean }): Promise<string> => {
-        console.log("Executing git commit...");
+        console.log("Running the git_commit_tool", { commit_message, validate });
 
         let commitMessageFile: string | null = null;
 
