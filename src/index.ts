@@ -541,4 +541,4 @@ const streamResponse = await agent.invoke({
     messages: [new HumanMessage(GIT_PROMPT)]
 });
 
-console.log(streamResponse);
+console.log(streamResponse.messages.at(-1)?.content || "No response from agent.");
