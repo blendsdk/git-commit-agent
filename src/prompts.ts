@@ -127,9 +127,18 @@ execute_git_command({ command: "add", args: ["."] })
 execute_git_command({ command: "add", args: ["file1.ts", "file2.ts"] })
 \`\`\`
 
-### Commit:
+### Commit (with multi-line message):
 \`\`\`
-execute_git_command({ command: "commit", args: ["-m", "your commit message"] })
+execute_git_command({ 
+  command: "commit", 
+  args: [],
+  commitMessage: "feat(scope): brief description
+
+Detailed body explaining what changed and why.
+Can span multiple lines.
+
+Footer with breaking changes or issue references."
+})
 \`\`\`
 
 ### Get Branch Info:
@@ -192,9 +201,38 @@ execute_git_command({ command: "log", args: ["-1", "--pretty=format:%H|%an|%s"] 
 ## 5. Execute the Commit
 
 1. Use \`execute_git_command\` with "commit" command
-2. Pass the commit message using \`["-m", "your message"]\` or \`["-F", "file"]\`
-3. Verify the commit was created successfully
-4. Optionally get commit details with "log" command
+2. **IMPORTANT**: Use the \`commitMessage\` parameter (NOT -m flag) to provide the full multi-line commit message
+3. The tool will automatically:
+   - Save the message to a temporary file
+   - Use the -F flag to read from the file
+   - Clean up the temporary file after commit
+4. Format the commit message with:
+   - First line: \`type(scope): brief description\` (max 72 chars)
+   - Blank line
+   - Body: Detailed explanation (multiple lines allowed)
+   - Blank line
+   - Footer: Breaking changes, issue references
+5. Verify the commit was created successfully
+6. Optionally get commit details with "log" command
+
+**Example:**
+\`\`\`
+execute_git_command({
+  command: "commit",
+  args: [],
+  commitMessage: "refactor(tools): extract git tools into separate files
+
+- Created modular structure with utils/, tools/, config/ directories
+- Each tool now in its own file for better maintainability
+- Added comprehensive error handling and logging
+- Simplified main index.ts to ~45 lines
+
+This refactoring improves code organization and makes it easier
+to add new tools or modify existing ones independently.
+
+Closes #123"
+})
+\`\`\`
 
 ## 6. Validation and Completion
 

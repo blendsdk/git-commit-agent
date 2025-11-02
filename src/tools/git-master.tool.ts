@@ -1,4 +1,6 @@
 import { execa } from "execa";
+import fs from "fs/promises";
+import path from "path";
 import { tool } from "langchain";
 import { z } from "zod";
 import { validateGitRepo } from "../utils/git-commands.js";
@@ -78,17 +80,34 @@ export const execute_git_command_tool = tool(
     async ({
         command,
         args,
-        allowDangerous = false
+        allowDangerous = false,
+        commitMessage
     }: {
         command: string;
         args: string[];
         allowDangerous?: boolean;
+        commitMessage?: string;
     }): Promise<string> => {
         const startTime = Date.now();
+        let commitMessageFile: string | null = null;
 
         try {
             // Validate git repository
             await validateGitRepo();
+
+            // Special handling for commit command with commitMessage
+            if (command === "commit" && commitMessage) {
+                // Save commit message to temporary file
+                commitMessageFile = path.join(process.cwd(), `commit_message_${Date.now()}.txt`);
+                await fs.writeFile(commitMessageFile, commitMessage);
+
+                // Replace -m flag with -F flag pointing to the file
+                const filteredArgs = args.filter((arg) => arg !== "-m" && !arg.startsWith("commit message"));
+                args = ["-F", commitMessageFile, ...filteredArgs];
+
+                console.log(`\n📝 Commit message saved to: ${commitMessageFile}`);
+                console.log(`📄 Message content:\n${commitMessage}\n`);
+            }
 
             // Safety check for dangerous commands
             if (!allowDangerous && isDangerousCommand(command, args)) {
@@ -218,21 +237,39 @@ export const execute_git_command_tool = tool(
             };
 
             return JSON.stringify(errorResult, null, 2);
+        } finally {
+            // Cleanup: Always try to delete the temporary commit message file
+            if (commitMessageFile) {
+                try {
+                    await fs.unlink(commitMessageFile);
+                    console.log(`🗑️  Cleaned up temporary commit message file`);
+                } catch {
+                    // Ignore cleanup errors
+                }
+            }
         }
     },
     {
         name: "execute_git_command",
         description:
-            "Execute any git command with comprehensive logging and safety checks. This is a master tool that can run any git operation. Dangerous commands (reset --hard, push --force, etc.) are blocked by default. All executions are logged with command, arguments, timing, and results.",
+            "Execute any git command with comprehensive logging and safety checks. This is a master tool that can run any git operation. For commit commands, use the commitMessage parameter to provide multi-line commit messages - the tool will automatically save it to a file and use -F flag. Dangerous commands (reset --hard, push --force, etc.) are blocked by default. All executions are logged with command, arguments, timing, and results.",
         schema: z.object({
             command: z.string().describe("The git command to execute (e.g., 'status', 'diff', 'add', 'commit')"),
             args: z
                 .array(z.string())
-                .describe("Arguments for the git command (e.g., ['--porcelain'], ['.'], ['-m', 'commit message'])"),
+                .describe(
+                    "Arguments for the git command (e.g., ['--porcelain'], ['.']). For commit, do NOT include -m flag, use commitMessage parameter instead."
+                ),
             allowDangerous: z
                 .boolean()
                 .optional()
-                .describe("Allow dangerous commands that could cause data loss (default: false)")
+                .describe("Allow dangerous commands that could cause data loss (default: false)"),
+            commitMessage: z
+                .string()
+                .optional()
+                .describe(
+                    "For commit command: Multi-line commit message. Tool will save to file and use -F flag automatically. Supports full conventional commit format with body and footer."
+                )
         })
     }
 );
