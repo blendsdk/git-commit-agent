@@ -15,7 +15,7 @@
     ],
     "scripts": {
         "build": "tsc",
-        "dev": "tsc --watch",
+        "dev": "rm -fR ./dist && tsc --watch",
         "start": "node ./dist/index.js",
         "start:enhanced": "node ./dist/index-enhanced.js",
         "go": "clear && node ./dist/index.js",

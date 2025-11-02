@@ -4,12 +4,12 @@ AI-powered git commit message generator using LangChain and OpenAI. Automaticall
 
 ## Features
 
-- 🤖 **AI-Powered Analysis** - Uses OpenAI to understand code changes
-- 📝 **Conventional Commits** - Generates standardized commit messages
-- 🔍 **Smart Detection** - Identifies commit type, scope, and impact
-- 🛡️ **Error Handling** - Comprehensive error handling with recovery suggestions (enhanced version)
-- 🌍 **Global Configuration** - Support for user-wide settings via `~/.env-git-agent`
-- 🚀 **CI/CD Ready** - GitHub Actions workflow for automated builds and releases
+-   🤖 **AI-Powered Analysis** - Uses OpenAI to understand code changes
+-   📝 **Conventional Commits** - Generates standardized commit messages
+-   🔍 **Smart Detection** - Identifies commit type, scope, and impact
+-   🛡️ **Error Handling** - Comprehensive error handling with recovery suggestions (enhanced version)
+-   🌍 **Global Configuration** - Support for user-wide settings via `~/.agent-config`
+-   🚀 **CI/CD Ready** - GitHub Actions workflow for automated builds and releases
 
 ## Installation
 
@@ -44,7 +44,7 @@ yarn start
 
 ### Environment Variables
 
-Create a `.env` file in your project root or `~/.env-git-agent` in your home directory:
+Create a `.env` file in your project root or `~/.agent-config` in your home directory:
 
 ```env
 # Required
@@ -61,14 +61,14 @@ LANGCHAIN_API_KEY=your_langchain_api_key
 
 ### Global Configuration
 
-For user-wide settings, create `~/.env-git-agent`:
+For user-wide settings, create `~/.agent-config`:
 
 ```bash
 # Linux/Mac
-echo "OPENAI_API_KEY=your_key_here" > ~/.env-git-agent
+echo "OPENAI_API_KEY=your_key_here" > ~/.agent-config
 
 # Windows
-echo OPENAI_API_KEY=your_key_here > %USERPROFILE%\.env-git-agent
+echo OPENAI_API_KEY=your_key_here > %USERPROFILE%\.agent-config
 ```
 
 **Note:** Local `.env` files override global settings.
@@ -92,6 +92,7 @@ yarn start
 ```
 
 The agent will:
+
 1. Analyze all changes in your repository
 2. Generate a conventional commit message
 3. Stage all changes
@@ -129,18 +130,18 @@ The agent generates commit messages following the [Conventional Commits](https:/
 
 ### Commit Types
 
-| Type | Description |
-|------|-------------|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `docs` | Documentation changes |
-| `style` | Code style changes (formatting) |
-| `refactor` | Code refactoring |
-| `perf` | Performance improvements |
-| `test` | Adding or updating tests |
-| `build` | Build system changes |
-| `ci` | CI configuration changes |
-| `chore` | Other changes |
+| Type       | Description                     |
+| ---------- | ------------------------------- |
+| `feat`     | New feature                     |
+| `fix`      | Bug fix                         |
+| `docs`     | Documentation changes           |
+| `style`    | Code style changes (formatting) |
+| `refactor` | Code refactoring                |
+| `perf`     | Performance improvements        |
+| `test`     | Adding or updating tests        |
+| `build`    | Build system changes            |
+| `ci`       | CI configuration changes        |
+| `chore`    | Other changes                   |
 
 ### Example Output
 
@@ -160,8 +161,8 @@ Closes #234
 
 ## Documentation
 
-- [ENHANCEMENTS.md](./ENHANCEMENTS.md) - Technical documentation of enhancements
-- [COMMIT_PROMPT_GUIDE.md](./COMMIT_PROMPT_GUIDE.md) - Comprehensive commit message guide
+-   [ENHANCEMENTS.md](./ENHANCEMENTS.md) - Technical documentation of enhancements
+-   [COMMIT_PROMPT_GUIDE.md](./COMMIT_PROMPT_GUIDE.md) - Comprehensive commit message guide
 
 ## Project Structure
 
@@ -239,6 +240,7 @@ To enable automatic NPM publishing:
 ### "Not a git repository" Error
 
 Make sure you're in a git repository:
+
 ```bash
 git init  # If starting a new repo
 ```
@@ -246,6 +248,7 @@ git init  # If starting a new repo
 ### "OPENAI_API_KEY not found" Error
 
 Set your API key:
+
 ```bash
 export OPENAI_API_KEY=your_key_here
 # Or add to .env file
@@ -254,6 +257,7 @@ export OPENAI_API_KEY=your_key_here
 ### "No changes to commit" Error
 
 Make sure you have uncommitted changes:
+
 ```bash
 git status  # Check for changes
 ```
@@ -283,9 +287,9 @@ ISC License - see LICENSE file for details
 
 ## Acknowledgments
 
-- [LangChain](https://github.com/langchain-ai/langchainjs) - Framework for LLM applications
-- [OpenAI](https://openai.com/) - AI model provider
-- [Conventional Commits](https://www.conventionalcommits.org/) - Commit message specification
+-   [LangChain](https://github.com/langchain-ai/langchainjs) - Framework for LLM applications
+-   [OpenAI](https://openai.com/) - AI model provider
+-   [Conventional Commits](https://www.conventionalcommits.org/) - Commit message specification
 
 ## Support
 

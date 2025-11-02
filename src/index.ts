@@ -1,236 +1,544 @@
 import { ChatOpenAI } from "@langchain/openai";
 import dotenv from "dotenv";
 import { execa } from "execa";
-import fs from "fs";
+import fs from "fs/promises";
 import { createAgent, HumanMessage, tool } from "langchain";
+import os from "os";
 import path from "path";
 import { z } from "zod";
-import os from "os";
+import { GIT_PROMPT, SYSTEM_PROMPT } from "./prompts.js";
 
 // Load environment variables from multiple sources
-// 1. Load from global .env-git-agent in user's home directory (if exists)
-const globalEnvPath = path.join(os.homedir(), ".env-git-agent");
-if (fs.existsSync(globalEnvPath)) {
-    console.log(`Loading global config from: ${globalEnvPath}`);
-    dotenv.config({ path: globalEnvPath });
+// 1. Load from global .agent-config in user's home directory (if exists)
+const globalEnvPath = path.join(os.homedir(), ".agent-config");
+try {
+    const fsSync = await import("fs");
+    if (fsSync.existsSync(globalEnvPath)) {
+        console.log(`Loading global config from: ${globalEnvPath}`);
+        dotenv.config({ path: globalEnvPath });
+    }
+} catch (error) {
+    // Ignore if file doesn't exist
 }
 
 // 2. Load from local .env (overrides global settings)
 dotenv.config();
 
-const model = new ChatOpenAI({
-    temperature: 1,
-    modelName: "gpt-5-nano-2025-08-07"
-});
+// ============================================================================
+// ERROR HANDLING UTILITIES
+// ============================================================================
+
+class GitError extends Error {
+    constructor(
+        message: string,
+        public code: string,
+        public details?: any,
+        public recoverable: boolean = true,
+        public suggestion?: string
+    ) {
+        super(message);
+        this.name = "GitError";
+    }
+}
+
+interface ToolResult {
+    success: boolean;
+    data?: any;
+    error?: {
+        code: string;
+        message: string;
+        command?: string;
+        details?: any;
+        recoverable: boolean;
+        suggestion?: string;
+    };
+    warnings?: string[];
+    partialResults?: Record<string, any>;
+}
+
+// Validate if current directory is a git repository
+async function validateGitRepo(): Promise<void> {
+    try {
+        await execa("git", ["rev-parse", "--git-dir"]);
+    } catch (error) {
+        throw new GitError(
+            "Not a git repository",
+            "NOT_GIT_REPO",
+            error,
+            false,
+            "Initialize a git repository with 'git init' or navigate to a git repository"
+        );
+    }
+}
+
+// Check if git is installed
+async function isGitInstalled(): Promise<boolean> {
+    try {
+        await execa("git", ["--version"]);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+// Validate conventional commit message format
+function validateCommitMessage(message: string): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    if (!message || message.trim().length === 0) {
+        errors.push("Commit message cannot be empty");
+        return { valid: false, errors };
+    }
+
+    const lines = message.split("\n");
+    const firstLine = lines[0] || "";
+
+    // Check conventional commit format: type(scope): description
+    const conventionalCommitRegex = /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?: .+/;
+
+    if (!conventionalCommitRegex.test(firstLine)) {
+        errors.push(
+            "First line should follow conventional commit format: type(scope): description\n" +
+                "Valid types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+        );
+    }
+
+    if (firstLine.length > 72) {
+        errors.push("First line should be 72 characters or less");
+    }
+
+    return { valid: errors.length === 0, errors };
+}
+
+// Execute git command with error handling
+async function executeGitCommand(
+    args: string[],
+    options: {
+        timeout?: number;
+        required?: boolean;
+        errorMessage?: string;
+    } = {}
+): Promise<{ stdout: string; stderr: string; success: boolean; error?: any }> {
+    const { timeout = 30000, required = true, errorMessage } = options;
+
+    try {
+        const result = await execa("git", args, { timeout });
+        return {
+            stdout: result.stdout,
+            stderr: result.stderr,
+            success: true
+        };
+    } catch (error: any) {
+        if (required) {
+            throw new GitError(
+                errorMessage || `Git command failed: git ${args.join(" ")}`,
+                "GIT_COMMAND_FAILED",
+                error,
+                true,
+                "Check git status and try again"
+            );
+        }
+        return {
+            stdout: "",
+            stderr: error.stderr || error.message,
+            success: false,
+            error
+        };
+    }
+}
+
+// ============================================================================
+// ENHANCED EXISTING TOOLS
+// ============================================================================
 
 const git_status_tool = tool(
-    async () => {
+    async (): Promise<string> => {
         console.log("Executing git status...");
-        await execa("git", ["config", "--global", "pager.diff", "false"]);
 
-        const status = await execa("git", ["status", "--porcelain"]);
-        const diff = await execa("git", ["diff", "--name-only"]);
-        const cached = await execa("git", ["diff", "--name-only", "--cached"]);
-        return [
-            `Git Status:\n${status.stdout}`,
-            `Changed Files:\n${diff.stdout}`,
-            `Staged Files:\n${cached.stdout}`
-        ].join("\n\n");
+        try {
+            await validateGitRepo();
+
+            const results: ToolResult = {
+                success: true,
+                data: {},
+                warnings: [],
+                partialResults: {}
+            };
+
+            // Configure pager (optional, non-blocking)
+            const pagerConfig = await executeGitCommand(["config", "--global", "pager.diff", "false"], {
+                required: false
+            });
+            if (!pagerConfig.success) {
+                results.warnings?.push("Could not configure pager (non-critical)");
+            }
+
+            // Get status (required)
+            const status = await executeGitCommand(["status", "--porcelain"], {
+                errorMessage: "Failed to get git status"
+            });
+            if (results.partialResults) {
+                results.partialResults.status = status.stdout;
+            }
+
+            // Get unstaged changes (required)
+            const diff = await executeGitCommand(["diff", "--name-only"], {
+                errorMessage: "Failed to get changed files"
+            });
+            if (results.partialResults) {
+                results.partialResults.changedFiles = diff.stdout;
+            }
+
+            // Get staged changes (required)
+            const cached = await executeGitCommand(["diff", "--name-only", "--cached"], {
+                errorMessage: "Failed to get staged files"
+            });
+            if (results.partialResults) {
+                results.partialResults.stagedFiles = cached.stdout;
+            }
+
+            // Get current branch
+            const branch = await executeGitCommand(["branch", "--show-current"], { required: false });
+            if (branch.success && results.partialResults) {
+                results.partialResults.currentBranch = branch.stdout.trim();
+            }
+
+            const output = [
+                `Git Status:\n${status.stdout || "(no changes)"}`,
+                `Changed Files:\n${diff.stdout || "(none)"}`,
+                `Staged Files:\n${cached.stdout || "(none)"}`
+            ];
+
+            if (branch.success && branch.stdout.trim()) {
+                output.unshift(`Current Branch: ${branch.stdout.trim()}`);
+            }
+
+            if (results.warnings && results.warnings.length > 0) {
+                output.push(`\nWarnings:\n${results.warnings.join("\n")}`);
+            }
+
+            results.data = output.join("\n\n");
+            return JSON.stringify(results, null, 2);
+        } catch (error: any) {
+            const errorResult: ToolResult = {
+                success: false,
+                error: {
+                    code: error.code || "UNKNOWN_ERROR",
+                    message: error.message,
+                    command: "git status",
+                    details: error.details,
+                    recoverable: error.recoverable ?? true,
+                    suggestion: error.suggestion
+                }
+            };
+            return JSON.stringify(errorResult, null, 2);
+        }
     },
     {
         name: "git_status",
-        description: "Get the current status of the git repository"
+        description:
+            "Get the current status of the git repository including branch, changed files, and staged files. Returns detailed status with error handling."
     }
 );
 
 const git_diff_tool = tool(
-    async () => {
+    async ({ files }: { files?: string[] }): Promise<string> => {
         console.log("Executing git diff...");
-        const diff1 = await execa("git", ["--no-pager", "diff"]);
-        const diff2 = await execa("git", ["diff", "--cached"]);
-        const stdout = `=== UNSTAGED CHANGES ===\n${diff1.stdout}\n\n=== STAGED CHANGES ===\n${diff2.stdout}`;
-        return stdout;
+
+        try {
+            await validateGitRepo();
+
+            const results: ToolResult = {
+                success: true,
+                data: {},
+                partialResults: {}
+            };
+
+            const diffArgs = ["--no-pager", "diff"];
+            if (files && files.length > 0) {
+                diffArgs.push("--", ...files);
+            }
+
+            // Get unstaged changes
+            const diff1 = await executeGitCommand(diffArgs, {
+                errorMessage: "Failed to get unstaged diff"
+            });
+
+            // Get staged changes
+            const cachedArgs = ["diff", "--cached"];
+            if (files && files.length > 0) {
+                cachedArgs.push("--", ...files);
+            }
+            const diff2 = await executeGitCommand(cachedArgs, {
+                errorMessage: "Failed to get staged diff"
+            });
+
+            // Get diff stats
+            const statArgs = ["diff", "--stat"];
+            if (files && files.length > 0) {
+                statArgs.push("--", ...files);
+            }
+            const stats = await executeGitCommand(statArgs, { required: false });
+
+            const output = [
+                `=== UNSTAGED CHANGES ===\n${diff1.stdout || "(no unstaged changes)"}`,
+                `\n=== STAGED CHANGES ===\n${diff2.stdout || "(no staged changes)"}`
+            ];
+
+            if (stats.success && stats.stdout) {
+                output.push(`\n=== STATISTICS ===\n${stats.stdout}`);
+            }
+
+            // Check for large diffs
+            const totalLines = (diff1.stdout + diff2.stdout).split("\n").length;
+            if (totalLines > 1000) {
+                results.warnings = [`Large diff detected (${totalLines} lines). Consider reviewing in smaller chunks.`];
+            }
+
+            results.data = output.join("\n");
+            return JSON.stringify(results, null, 2);
+        } catch (error: any) {
+            const errorResult: ToolResult = {
+                success: false,
+                error: {
+                    code: error.code || "UNKNOWN_ERROR",
+                    message: error.message,
+                    command: "git diff",
+                    details: error.details,
+                    recoverable: error.recoverable ?? true,
+                    suggestion: error.suggestion
+                }
+            };
+            return JSON.stringify(errorResult, null, 2);
+        }
     },
     {
         name: "git_diff",
-        description: "Get the detailed diff of the current changes in the git repository"
-    }
-);
-
-const git_add_tool = tool(
-    async () => {
-        console.log("Executing git add . ...");
-        const { stdout } = await execa("git", ["add", "."]);
-        return stdout.toString();
-    },
-    {
-        name: "git_add",
-        description: "Stage all changes in the git repository"
-    }
-);
-
-const git_commit_tool = tool(
-    async ({ commit_message }) => {
-        console.log("Executing git commit...");
-        console.log("Commit message:", commit_message);
-        const commitMessageFile = path.join(process.cwd(), "commit_message.txt");
-        fs.writeFileSync(commitMessageFile, commit_message.toString());
-        const result = await execa("git", ["commit", "-F", commitMessageFile]);
-        fs.unlinkSync(commitMessageFile);
-        return result.stdout.toString();
-    },
-    {
-        name: "git_commit",
-        description: "Commit the staged changes with the provided commit message",
+        description:
+            "Get the detailed diff of changes in the git repository. Optionally specify files to diff. Returns both unstaged and staged changes with statistics.",
         schema: z.object({
-            commit_message: z.string().describe("The commit message summarizing the changes")
+            files: z
+                .array(z.string())
+                .optional()
+                .describe("Optional array of file paths to get diff for specific files")
         })
     }
 );
 
+const git_add_tool = tool(
+    async ({ files, all }: { files?: string[]; all?: boolean }): Promise<string> => {
+        console.log("Executing git add...");
+
+        try {
+            await validateGitRepo();
+
+            // Check if there are changes to stage
+            const statusCheck = await executeGitCommand(["status", "--porcelain"], {
+                errorMessage: "Failed to check repository status"
+            });
+
+            if (!statusCheck.stdout.trim()) {
+                const result: ToolResult = {
+                    success: true,
+                    data: "No changes to stage",
+                    warnings: ["Repository is clean, nothing to add"]
+                };
+                return JSON.stringify(result, null, 2);
+            }
+
+            const addArgs = ["add"];
+
+            if (all || !files || files.length === 0) {
+                addArgs.push(".");
+            } else {
+                // Validate files exist
+                for (const file of files) {
+                    try {
+                        await fs.access(file);
+                    } catch {
+                        throw new GitError(
+                            `File not found: ${file}`,
+                            "FILE_NOT_FOUND",
+                            { file },
+                            true,
+                            "Check the file path and try again"
+                        );
+                    }
+                }
+                addArgs.push(...files);
+            }
+
+            await executeGitCommand(addArgs, {
+                errorMessage: "Failed to stage changes"
+            });
+
+            // Verify what was staged
+            const staged = await executeGitCommand(["diff", "--name-only", "--cached"], { required: false });
+
+            const result: ToolResult = {
+                success: true,
+                data: {
+                    message: "Changes staged successfully",
+                    stagedFiles: staged.stdout.split("\n").filter((f) => f.trim())
+                }
+            };
+
+            return JSON.stringify(result, null, 2);
+        } catch (error: any) {
+            const errorResult: ToolResult = {
+                success: false,
+                error: {
+                    code: error.code || "UNKNOWN_ERROR",
+                    message: error.message,
+                    command: "git add",
+                    details: error.details,
+                    recoverable: error.recoverable ?? true,
+                    suggestion: error.suggestion
+                }
+            };
+            return JSON.stringify(errorResult, null, 2);
+        }
+    },
+    {
+        name: "git_add",
+        description:
+            "Stage changes in the git repository. Can stage all changes or specific files. Validates files exist before staging.",
+        schema: z.object({
+            files: z.array(z.string()).optional().describe("Optional array of specific file paths to stage"),
+            all: z.boolean().optional().describe("Stage all changes (default: true if no files specified)")
+        })
+    }
+);
+
+const git_commit_tool = tool(
+    async ({ commit_message, validate }: { commit_message: string; validate?: boolean }): Promise<string> => {
+        console.log("Executing git commit...");
+        console.log("Commit message:", commit_message);
+
+        let commitMessageFile: string | null = null;
+
+        try {
+            await validateGitRepo();
+
+            // Validate commit message format if requested
+            if (validate !== false) {
+                const validation = validateCommitMessage(commit_message);
+                if (!validation.valid) {
+                    throw new GitError(
+                        "Invalid commit message format",
+                        "INVALID_COMMIT_MESSAGE",
+                        { errors: validation.errors },
+                        true,
+                        validation.errors.join("\n")
+                    );
+                }
+            }
+
+            // Check if there are staged changes
+            const stagedCheck = await executeGitCommand(["diff", "--cached", "--name-only"], {
+                errorMessage: "Failed to check staged changes"
+            });
+
+            if (!stagedCheck.stdout.trim()) {
+                throw new GitError(
+                    "No staged changes to commit",
+                    "NO_STAGED_CHANGES",
+                    undefined,
+                    true,
+                    "Stage changes with git_add before committing"
+                );
+            }
+
+            // Write commit message to temporary file
+            commitMessageFile = path.join(process.cwd(), `commit_message_${Date.now()}.txt`);
+            await fs.writeFile(commitMessageFile, commit_message);
+
+            // Execute commit
+            const commitResult = await executeGitCommand(["commit", "-F", commitMessageFile], {
+                errorMessage: "Failed to create commit"
+            });
+
+            // Get commit hash
+            const hashResult = await executeGitCommand(["rev-parse", "HEAD"], { required: false });
+
+            // Get commit details
+            const logResult = await executeGitCommand(["log", "-1", "--pretty=format:%H|%an|%ae|%ad|%s"], {
+                required: false
+            });
+
+            const result: ToolResult = {
+                success: true,
+                data: {
+                    message: "Commit created successfully",
+                    commitOutput: commitResult.stdout,
+                    commitHash: hashResult.success ? hashResult.stdout.trim() : "unknown",
+                    stagedFiles: stagedCheck.stdout.split("\n").filter((f) => f.trim())
+                }
+            };
+
+            if (logResult.success) {
+                const [hash, author, email, date, subject] = logResult.stdout.split("|");
+                result.data.commitDetails = { hash, author, email, date, subject };
+            }
+
+            return JSON.stringify(result, null, 2);
+        } catch (error: any) {
+            const errorResult: ToolResult = {
+                success: false,
+                error: {
+                    code: error.code || "UNKNOWN_ERROR",
+                    message: error.message,
+                    command: "git commit",
+                    details: error.details,
+                    recoverable: error.recoverable ?? true,
+                    suggestion: error.suggestion
+                }
+            };
+            return JSON.stringify(errorResult, null, 2);
+        } finally {
+            // Cleanup: Always try to delete the temporary commit message file
+            if (commitMessageFile) {
+                try {
+                    await fs.unlink(commitMessageFile);
+                } catch {
+                    // Ignore cleanup errors
+                }
+            }
+        }
+    },
+    {
+        name: "git_commit",
+        description:
+            "Commit staged changes with a commit message. Validates conventional commit format and ensures staged changes exist. Returns commit hash and details.",
+        schema: z.object({
+            commit_message: z.string().describe("The commit message summarizing the changes"),
+            validate: z.boolean().optional().describe("Validate commit message format (default: true)")
+        })
+    }
+);
+
+// ============================================================================
+// AGENT CONFIGURATION
+// ============================================================================
+
+const model = new ChatOpenAI({
+    model: process.env.OPENAI_MODEL?.toString() || "gpt-5-nano-2025-08-07",
+    apiKey: process.env.OPENAI_API_KEY || "<NEED API KEY>",
+    maxRetries: 3
+});
+
 const agent = createAgent({
     model,
     tools: [git_status_tool, git_diff_tool, git_add_tool, git_commit_tool],
-    systemPrompt: `You are a helpful assistant that can execute git commands to help manage a git repository.`
+    systemPrompt: SYSTEM_PROMPT
 });
+
+// ============================================================================
+// MAIN EXECUTION
+// ============================================================================
 
 const streamResponse = await agent.invoke({
-    messages: [
-        new HumanMessage(`
-# TASK OBJECTIVE
-Analyze all current changes in the git repository, generate a comprehensive and detailed commit message based on
-the modifications, stage all changes, and execute the commit. Create a commit message that follows conventional
-commit standards and provides clear context for future developers.
-
-# WORKFLOW
-1. Use git_status_tool to get current repository status and changed files
-2. Use git_diff_tool to examine detailed differences and understand the nature of changes
-3. Analyze the changes to determine:
-   - The primary type of change (feature, fix, refactor, etc.)
-   - The scope/area affected (component, module, feature area)
-   - The impact and purpose of the changes
-4. Use git_add_tool to stage all changes
-5. Generate a comprehensive conventional commit message
-6. Use git_commit_tool to commit with the generated message
-
-# CONVENTIONAL COMMIT FORMAT
-
-Structure:
-<type>(<scope>): <subject>
-
-<body>
-
-<footer>
-
-## Commit Types (Choose the most appropriate)
-
-| Type | When to Use | Example |
-|------|-------------|---------|
-| feat | New feature or functionality | feat(auth): add OAuth2 support |
-| fix | Bug fix | fix(api): prevent race condition in requests |
-| docs | Documentation only | docs(readme): update installation steps |
-| style | Code style/formatting (no logic change) | style(parser): fix indentation |
-| refactor | Code restructuring (no bug fix or feature) | refactor(utils): extract validation logic |
-| perf | Performance improvement | perf(query): optimize database queries |
-| test | Adding or updating tests | test(auth): add unit tests for login |
-| build | Build system or dependency changes | build(deps): update webpack to v5 |
-| ci | CI configuration changes | ci(github): add automated testing |
-| chore | Other changes (no src/test modification) | chore(config): update eslint rules |
-
-## Scope Guidelines
-
-The scope indicates the area of codebase affected. Examples:
-- Component name: auth, api, ui, dashboard, parser
-- Module name: validator, router, middleware
-- File type: config, types, styles
-- Feature area: login, checkout, profile, search
-
-## Subject Line Rules (CRITICAL)
-
-- Use imperative mood: "add" NOT "added" or "adds"
-- Do NOT capitalize first letter
-- No period at the end
-- Maximum 72 characters
-- Be specific and descriptive
-
-Good: "add user authentication middleware"
-Bad: "Added new feature" (wrong tense, vague, capitalized)
-
-## Body Guidelines (For non-trivial changes)
-
-- Explain WHAT changed and WHY (not HOW - code shows that)
-- Wrap at 72 characters per line
-- Separate from subject with blank line
-- Use bullet points for multiple changes
-- Provide context that helps future developers understand the reasoning
-
-## Footer (Optional)
-
-- Breaking changes: "BREAKING CHANGE: description"
-- Issue references: "Fixes #123" or "Closes #456"
-
-# ANALYSIS GUIDELINES
-
-When analyzing the diff:
-
-1. **Read carefully** - Understand what actually changed, not just file names
-2. **Identify patterns** - Are multiple files changed for the same reason?
-3. **Determine primary type** - What's the main purpose? (feat/fix/refactor/etc)
-4. **Find the scope** - What component/module/area is affected?
-5. **Assess impact** - Is this breaking? Does it affect users?
-6. **Group related changes** - Multiple small changes might be one logical change
-7. **Be specific** - "fix null pointer in validation" NOT "fix bug"
-
-# COMPLETE EXAMPLES
-
-Example 1 - Feature with body:
-feat(auth): add OAuth2 authentication support
-
-- Implement OAuth2 flow with Google and GitHub providers
-- Add token refresh mechanism
-- Create user session management
-- Update authentication middleware to support OAuth tokens
-
-This enables users to sign in using their existing social accounts,
-improving user experience and reducing friction in the signup process.
-
-Example 2 - Bug fix with context:
-fix(api): prevent race condition in concurrent requests
-
-The previous implementation didn't properly handle concurrent API calls
-to the same resource, causing data inconsistency. This fix adds proper
-request queuing and mutex locks to ensure data integrity.
-
-Example 3 - Refactoring:
-refactor(parser): extract validation logic into separate module
-
-- Move validation functions to validators.ts
-- Create reusable validation schemas
-- Improve error messages for better debugging
-- Add unit tests for validation logic
-
-This improves code maintainability and makes validation logic
-reusable across different parsers.
-
-# QUALITY CHECKLIST
-
-Before finalizing, verify:
-- Type accurately reflects the change
-- Scope clearly indicates affected area
-- Subject is concise (<72 chars), imperative mood, no period
-- Body explains WHAT and WHY for non-trivial changes
-- Message is clear for someone unfamiliar with the code
-- No typos or grammatical errors
-
-# IMPORTANT NOTES
-
-- Always examine actual diff content, don't just rely on file names
-- For multiple unrelated changes, focus on the primary change
-- If changes are complex, summarize main points in body with bullets
-- Make the commit message tell a story that future developers can understand
-- Stage all changes before committing
-        `)
-    ]
+    messages: [new HumanMessage(GIT_PROMPT)]
 });
 
-console.log("Done!");
+console.log(streamResponse);
