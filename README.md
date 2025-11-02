@@ -120,12 +120,17 @@ yarn start
 
 The agent will:
 
-1. Analyze all changes in your repository
-2. Generate a conventional commit message
+1. Analyze all changes in your repository using the master git tool
+2. Generate a comprehensive conventional commit message
 3. Stage all changes
-4. Create the commit
+4. Create the commit with proper multi-line formatting
 
-**Note:** The agent includes comprehensive error handling with validation, recovery suggestions, and detailed error reporting.
+**Features:**
+- Single powerful tool that can execute any git command
+- Comprehensive error handling with validation and recovery suggestions
+- Safety checks block dangerous commands (reset --hard, push --force, etc.)
+- Minimal, informational console logging
+- Multi-line commit message support with proper formatting
 
 ### Development Mode
 
@@ -190,9 +195,16 @@ Closes #234
 ```
 git-commit-agent/
 ├── src/
-│   ├── index.ts              # Main agent with error handling
+│   ├── index.ts              # Main agent entry point
 │   ├── prompts.ts            # System and commit prompts
-│   └── index-enhanced.ts     # Alternative enhanced version
+│   ├── config/
+│   │   └── env-loader.ts    # Environment configuration
+│   ├── tools/
+│   │   └── git-master.tool.ts  # Master git command tool
+│   └── utils/
+│       ├── git-commands.ts  # Git command utilities
+│       ├── git-error.ts     # Error handling
+│       └── validators.ts    # Validation functions
 ├── dist/                     # Compiled JavaScript (generated)
 ├── .github/
 │   └── workflows/
@@ -221,8 +233,7 @@ yarn clean
 ```bash
 yarn build          # Compile TypeScript
 yarn dev            # Watch mode
-yarn start          # Run main agent
-yarn start:enhanced # Run alternative enhanced version
+yarn start          # Run the agent
 yarn go             # Clear console and run
 yarn clean          # Remove dist folder
 ```

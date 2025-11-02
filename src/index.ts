@@ -4,10 +4,7 @@ import { ChatOpenAI } from "@langchain/openai";
 import { createAgent, HumanMessage } from "langchain";
 import { loadEnvironment } from "./config/env-loader.js";
 import { GIT_PROMPT, SYSTEM_PROMPT } from "./prompts.js";
-import { git_add_tool } from "./tools/git-add.tool.js";
-import { git_commit_tool } from "./tools/git-commit.tool.js";
-import { git_diff_tool } from "./tools/git-diff.tool.js";
-import { git_status_tool } from "./tools/git-status.tool.js";
+import { execute_git_command_tool } from "./tools/git-master.tool.js";
 
 // ============================================================================
 // ENVIRONMENT SETUP
@@ -27,7 +24,7 @@ const model = new ChatOpenAI({
 
 const agent = createAgent({
     model,
-    tools: [git_status_tool, git_diff_tool, git_add_tool, git_commit_tool],
+    tools: [execute_git_command_tool],
     systemPrompt: SYSTEM_PROMPT
 });
 
@@ -35,8 +32,14 @@ const agent = createAgent({
 // MAIN EXECUTION
 // ============================================================================
 
+console.log("\n🚀 Starting Git Commit Agent...\n");
+
 const streamResponse = await agent.invoke({
     messages: [new HumanMessage(GIT_PROMPT)]
 });
 
+console.log("\n" + "=".repeat(80));
+console.log("AGENT RESPONSE:");
+console.log("=".repeat(80));
 console.log(streamResponse.messages.at(-1)?.content || "No response from agent.");
+console.log("=".repeat(80) + "\n");
