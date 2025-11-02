@@ -116,4 +116,4 @@ Make sure to stage all changes before committing and provide accurate informatio
     ]
 });
 
-console.log("Agent response:", streamResponse);
+console.log(streamResponse);
