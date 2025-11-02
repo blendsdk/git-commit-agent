@@ -414,7 +414,10 @@ const git_add_tool = tool(
 
 const git_commit_tool = tool(
     async ({ commit_message, validate }: { commit_message: string; validate?: boolean }): Promise<string> => {
-        console.log("Running the git_commit_tool", { commit_message, validate });
+        console.log("Running the git_commit_tool", {
+            commit_message: commit_message?.toString()?.split("\n")[0],
+            validate
+        });
 
         let commitMessageFile: string | null = null;
 
