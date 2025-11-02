@@ -7,7 +7,7 @@ AI-powered git commit message generator using LangChain and OpenAI. Automaticall
 -   🤖 **AI-Powered Analysis** - Uses OpenAI to understand code changes
 -   📝 **Conventional Commits** - Generates standardized commit messages
 -   🔍 **Smart Detection** - Identifies commit type, scope, and impact
--   🛡️ **Error Handling** - Comprehensive error handling with recovery suggestions (enhanced version)
+-   🛡️ **Error Handling** - Comprehensive error handling with recovery suggestions
 -   🌍 **Global Configuration** - Support for user-wide settings via `~/.agent-config`
 -   🚀 **CI/CD Ready** - GitHub Actions workflow for automated builds and releases
 
@@ -50,9 +50,8 @@ Create a `.env` file in your project root or `~/.agent-config` in your home dire
 # Required
 OPENAI_API_KEY=your_openai_api_key_here
 
-# Optional - Model configuration
-OPENAI_MODEL=gpt-4
-OPENAI_TEMPERATURE=0.7
+# Optional - Model configuration (defaults to gpt-5-nano-2025-08-07)
+OPENAI_MODEL=gpt-5-nano-2025-08-07
 
 # Optional - LangChain configuration
 LANGCHAIN_TRACING_V2=true
@@ -98,13 +97,7 @@ The agent will:
 3. Stage all changes
 4. Create the commit
 
-### Enhanced Version
-
-For the version with comprehensive error handling:
-
-```bash
-yarn start:enhanced
-```
+**Note:** The agent includes comprehensive error handling with validation, recovery suggestions, and detailed error reporting.
 
 ### Development Mode
 
@@ -169,8 +162,9 @@ Closes #234
 ```
 git-commit-agent/
 ├── src/
-│   ├── index.ts              # Main agent (basic version)
-│   └── index-enhanced.ts     # Enhanced version with error handling
+│   ├── index.ts              # Main agent with error handling
+│   ├── prompts.ts            # System and commit prompts
+│   └── index-enhanced.ts     # Alternative enhanced version
 ├── dist/                     # Compiled JavaScript (generated)
 ├── .github/
 │   └── workflows/
@@ -199,8 +193,8 @@ yarn clean
 ```bash
 yarn build          # Compile TypeScript
 yarn dev            # Watch mode
-yarn start          # Run basic version
-yarn start:enhanced # Run enhanced version
+yarn start          # Run main agent
+yarn start:enhanced # Run alternative enhanced version
 yarn go             # Clear console and run
 yarn clean          # Remove dist folder
 ```
