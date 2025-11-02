@@ -5,7 +5,22 @@ import fs from "fs/promises";
 import { createAgent, HumanMessage, tool } from "langchain";
 import path from "path";
 import { z } from "zod";
+import os from "os";
 
+// Load environment variables from multiple sources
+// 1. Load from global .env-git-agent in user's home directory (if exists)
+const globalEnvPath = path.join(os.homedir(), ".env-git-agent");
+try {
+    const fsSync = await import("fs");
+    if (fsSync.existsSync(globalEnvPath)) {
+        console.log(`Loading global config from: ${globalEnvPath}`);
+        dotenv.config({ path: globalEnvPath });
+    }
+} catch (error) {
+    // Ignore if file doesn't exist
+}
+
+// 2. Load from local .env (overrides global settings)
 dotenv.config();
 
 // ============================================================================

@@ -1,17 +1,49 @@
 {
-    "name": "git-commit-poc",
+    "name": "@blendsdk/git-commit-agent",
     "version": "1.0.0",
-    "main": "index.js",
+    "main": "dist/index.js",
     "type": "module",
-    "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1",
-        "dev": "tsc --watch",
-        "go": "clear && node ./dist/index.js"
+    "bin": {
+        "git-commit-agent": "./dist/index.js"
     },
-    "keywords": [],
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE",
+        "ENHANCEMENTS.md",
+        "COMMIT_PROMPT_GUIDE.md"
+    ],
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "start": "node ./dist/index.js",
+        "start:enhanced": "node ./dist/index-enhanced.js",
+        "go": "clear && node ./dist/index.js",
+        "clean": "rm -rf dist",
+        "prebuild": "npm run clean",
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "lint": "echo \"No linter configured yet\"",
+        "prepare": "npm run build"
+    },
+    "keywords": [
+        "git",
+        "commit",
+        "automation",
+        "conventional-commits",
+        "ai",
+        "langchain",
+        "openai"
+    ],
     "author": "",
     "license": "ISC",
-    "description": "",
+    "description": "AI-powered git commit message generator using LangChain and OpenAI. Automatically analyzes code changes and creates conventional commit messages.",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/yourusername/git-commit-agent.git"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    },
     "dependencies": {
         "@langchain/core": "^1.0.2",
         "@langchain/openai": "^1.0.0",
