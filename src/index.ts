@@ -457,8 +457,6 @@ const git_commit_tool = tool(
             commitMessageFile = path.join(process.cwd(), `commit_message_${Date.now()}.txt`);
             await fs.writeFile(commitMessageFile, commit_message);
 
-            console.log({ commit_message });
-
             // Execute commit
             const commitResult = await executeGitCommand(["commit", "-F", commitMessageFile], {
                 errorMessage: "Failed to create commit"
