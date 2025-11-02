@@ -1,0 +1,26 @@
+{
+    "name": "git-commit-poc",
+    "version": "1.0.0",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "dev": "tsc --watch",
+        "go": "clear && node ./dist/index.js"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "dependencies": {
+        "@langchain/core": "^1.0.2",
+        "@langchain/openai": "^1.0.0",
+        "@types/node": "^24.9.2",
+        "dotenv": "^17.2.3",
+        "execa": "^9.6.0",
+        "langchain": "^1.0.2",
+        "tslib": "^2.8.1",
+        "typescript": "^5.9.3",
+        "zod": "^4.1.12"
+    }
+}
