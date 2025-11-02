@@ -32,7 +32,7 @@ function requiresCaution(command: string): boolean {
 }
 
 /**
- * Log git command execution details
+ * Log git command execution details (minimal format)
  */
 function logExecution(data: {
     command: string;
@@ -45,32 +45,16 @@ function logExecution(data: {
     error?: any;
 }) {
     const duration = data.endTime - data.startTime;
-    const timestamp = new Date().toISOString();
+    const icon = data.success ? "✓" : "✗";
+    const argsStr = data.args.length > 0 ? " " + data.args.join(" ") : "";
 
-    console.log("\n" + "=".repeat(80));
-    console.log(`[GIT COMMAND EXECUTION LOG]`);
-    console.log(`Timestamp: ${timestamp}`);
-    console.log(`Command: git ${data.command}`);
-    console.log(`Arguments: ${JSON.stringify(data.args)}`);
-    console.log(`Duration: ${duration}ms`);
-    console.log(`Status: ${data.success ? "✓ SUCCESS" : "✗ FAILED"}`);
+    console.log(`${icon} git ${data.command}${argsStr} (${duration}ms)`);
 
-    if (data.stdout) {
-        console.log(`\nStdout (${data.stdout.length} chars):`);
-        console.log(data.stdout.substring(0, 500) + (data.stdout.length > 500 ? "..." : ""));
+    // Only show error details if command failed
+    if (!data.success && data.error) {
+        const errorMsg = data.error.message || data.stderr || data.error;
+        console.log(`  Error: ${errorMsg}`);
     }
-
-    if (data.stderr) {
-        console.log(`\nStderr:`);
-        console.log(data.stderr);
-    }
-
-    if (data.error) {
-        console.log(`\nError Details:`);
-        console.log(data.error.message || data.error);
-    }
-
-    console.log("=".repeat(80) + "\n");
 }
 
 /**
@@ -105,8 +89,9 @@ export const execute_git_command_tool = tool(
                 const filteredArgs = args.filter((arg) => arg !== "-m" && !arg.startsWith("commit message"));
                 args = ["-F", commitMessageFile, ...filteredArgs];
 
-                console.log(`\n📝 Commit message saved to: ${commitMessageFile}`);
-                console.log(`📄 Message content:\n${commitMessage}\n`);
+                // Show first line of commit message
+                const firstLine = commitMessage.split("\n")[0];
+                console.log(`📝 Commit: ${firstLine}`);
             }
 
             // Safety check for dangerous commands
@@ -242,7 +227,6 @@ export const execute_git_command_tool = tool(
             if (commitMessageFile) {
                 try {
                     await fs.unlink(commitMessageFile);
-                    console.log(`🗑️  Cleaned up temporary commit message file`);
                 } catch {
                     // Ignore cleanup errors
                 }
