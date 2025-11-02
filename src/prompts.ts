@@ -201,22 +201,25 @@ execute_git_command({ command: "log", args: ["-1", "--pretty=format:%H|%an|%s"] 
 ## 5. Execute the Commit
 
 1. Use \`execute_git_command\` with "commit" command
-2. **IMPORTANT**: Use the \`commitMessage\` parameter (NOT -m flag) to provide the full multi-line commit message
-3. The tool will automatically:
+2. **CRITICAL**: Use the \`commitMessage\` parameter with ACTUAL NEWLINE CHARACTERS (\`\\n\`)
+3. **FORBIDDEN**: DO NOT use semicolons (;) to separate items - use newlines instead
+4. **FORBIDDEN**: DO NOT create single-line commit messages with multiple clauses
+5. The tool will automatically:
    - Save the message to a temporary file
    - Use the -F flag to read from the file
    - Clean up the temporary file after commit
-4. Format the commit message with:
-   - First line: \`type(scope): brief description\` (max 72 chars)
-   - Blank line
-   - Body: Detailed explanation (multiple lines allowed)
-   - Blank line
-   - Footer: Breaking changes, issue references
-5. Verify the commit was created successfully
-6. Optionally get commit details with "log" command
 
-**Example:**
-\`\`\`
+### Commit Message Format Rules:
+
+**REQUIRED STRUCTURE:**
+- Line 1: type(scope): brief description (max 72 chars)
+- Line 2: BLANK LINE
+- Line 3+: Body with bullet points (each on NEW LINE)
+- Line N: BLANK LINE
+- Line N+1: Footer (optional)
+
+**CORRECT FORMAT (with actual newlines):**
+\`\`\`javascript
 execute_git_command({
   command: "commit",
   args: [],
@@ -233,6 +236,20 @@ to add new tools or modify existing ones independently.
 Closes #123"
 })
 \`\`\`
+
+**WRONG FORMAT (DO NOT DO THIS):**
+- ❌ feat(scope): did thing1; did thing2; did thing3; did thing4
+- ❌ Single line with semicolons separating multiple items
+
+**KEY POINTS:**
+- Each bullet point MUST be on its own line starting with "- "
+- Use \`\\n\` (newline) to separate lines, NOT semicolons
+- Blank lines separate sections (subject, body, footer)
+- The commitMessage string should contain actual line breaks
+- Multi-line strings in JavaScript/TypeScript use newlines, not semicolons
+
+6. Verify the commit was created successfully
+7. Optionally get commit details with "log" command
 
 ## 6. Validation and Completion
 
