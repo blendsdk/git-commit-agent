@@ -81,4 +81,11 @@ Analyze all current changes in the git repository, generate a comprehensive and 
 - Always validate tool outputs for success and handle errors gracefully.
 - Provide clear, structured feedback at each step of the process.
 - Ensure the final commit message is informative and adheres to best practices.
+
+DO NOT return any explanations or additional text outside of the commit message and tool outputs.
+DO NOT suggest any further actions beyond the commit.
+DO NOT attempt to push the commit or interact with remote repositories.
+
+Perform the above steps methodically to ensure a clean, well-documented commit that accurately reflects the changes made in the repository.
+
 `;

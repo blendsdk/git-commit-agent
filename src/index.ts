@@ -413,7 +413,6 @@ const git_add_tool = tool(
 const git_commit_tool = tool(
     async ({ commit_message, validate }: { commit_message: string; validate?: boolean }): Promise<string> => {
         console.log("Executing git commit...");
-        console.log("Commit message:", commit_message);
 
         let commitMessageFile: string | null = null;
 
@@ -452,6 +451,8 @@ const git_commit_tool = tool(
             // Write commit message to temporary file
             commitMessageFile = path.join(process.cwd(), `commit_message_${Date.now()}.txt`);
             await fs.writeFile(commitMessageFile, commit_message);
+
+            console.log({ commit_message });
 
             // Execute commit
             const commitResult = await executeGitCommand(["commit", "-F", commitMessageFile], {
