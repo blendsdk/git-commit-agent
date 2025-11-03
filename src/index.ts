@@ -15,7 +15,7 @@ import { loadFinalConfig } from "./config/config-merger.js";
 import { loadEnvironment } from "./config/env-loader.js";
 import { generateGitPrompt, generateSystemPrompt } from "./prompts/index.js";
 import { execute_git_command_tool } from "./tools/git-master.tool.js";
-import { getGitVersion } from "./utils/git-commands.js";
+import { checkNeedsPull, getGitVersion } from "./utils/git-commands.js";
 
 // ============================================================================
 // CONFIGURATION SETUP
@@ -128,3 +128,37 @@ console.log("AGENT RESPONSE:");
 console.log("=".repeat(80));
 console.log(streamResponse.messages.at(-1)?.content || "No response from agent.");
 console.log("=".repeat(80) + "\n");
+
+/**
+ * After commit is created, check if we need to pull from remote and sync.
+ * This ensures the local branch stays up to date with remote changes.
+ */
+if (!config.dryRun) {
+    const pullStatus = await checkNeedsPull();
+    if (config.verbose || pullStatus.needsPull) {
+        console.log(pullStatus.message);
+    }
+    if (pullStatus.needsPull) {
+        if (pullStatus.canAutoPull) {
+            // Safe to auto-pull (fast-forward only)
+            console.log("📥 Pulling latest changes from remote...");
+            try {
+                const { executeGitCommand } = await import("./utils/git-commands.js");
+                await executeGitCommand(["pull", "--rebase"]);
+                console.log("✅ Successfully synced with remote\n");
+            } catch (error) {
+                console.error("\n⚠️  Warning: Failed to pull from remote:");
+                console.error(`   ${error}`);
+                console.error("   Your commit was created successfully, but you should manually run:");
+                console.error("   'git pull --rebase' to sync with remote.\n");
+            }
+        } else {
+            // Branches have diverged - inform user
+            console.log("\n⚠️  Note: Your local branch has diverged from remote.");
+            console.log("   Your commit was created successfully, but you should manually sync:");
+            console.log("   1. Run: git pull --rebase");
+            console.log("   2. Resolve any conflicts if they occur");
+            console.log("   3. Then push your changes\n");
+        }
+    }
+}

@@ -131,7 +131,7 @@ export function validateCommandSyntax(command: string, args: string[]): string[]
 
     while (i < args.length) {
         const arg = args[i];
-        
+
         // Safety check for undefined
         if (!arg) {
             i++;
@@ -158,6 +158,148 @@ export function validateCommandSyntax(command: string, args: string[]): string[]
     }
 
     return correctedArgs;
+}
+
+/**
+ * Check if the local repository needs to pull from remote.
+ * This prevents the agent from running when the local branch is behind or has diverged from remote.
+ *
+ * @async
+ * @returns {Promise<Object>} Status object indicating if pull is needed
+ * @returns {boolean} return.needsPull - True if repository needs to be pulled
+ * @returns {boolean} return.canAutoPull - True if safe to automatically pull (fast-forward only)
+ * @returns {string} return.message - Descriptive message about the repository state
+ *
+ * @example
+ * const status = await checkNeedsPull();
+ * if (status.needsPull) {
+ *   if (status.canAutoPull) {
+ *     // Safe to auto-pull
+ *   } else {
+ *     // Require manual intervention
+ *   }
+ * }
+ */
+export async function checkNeedsPull(): Promise<{
+    needsPull: boolean;
+    canAutoPull: boolean;
+    message: string;
+}> {
+    try {
+        // First, try to fetch remote updates (silently)
+        try {
+            await execa("git", ["fetch"], { timeout: 10000 });
+        } catch (fetchError) {
+            // If fetch fails (network issues, no remote, etc.), warn but continue
+            return {
+                needsPull: false,
+                canAutoPull: false,
+                message: "⚠️  Could not fetch from remote (network issue or no remote configured). Continuing anyway..."
+            };
+        }
+
+        // Get current branch name
+        let currentBranch: string;
+        try {
+            const branchResult = await execa("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
+            currentBranch = branchResult.stdout.trim();
+
+            // Skip check if in detached HEAD state
+            if (currentBranch === "HEAD") {
+                return {
+                    needsPull: false,
+                    canAutoPull: false,
+                    message: "ℹ️  In detached HEAD state, skipping pull check"
+                };
+            }
+        } catch {
+            return {
+                needsPull: false,
+                canAutoPull: false,
+                message: "⚠️  Could not determine current branch, skipping pull check"
+            };
+        }
+
+        // Get local commit hash
+        let localHash: string;
+        try {
+            const localResult = await execa("git", ["rev-parse", "@"]);
+            localHash = localResult.stdout.trim();
+        } catch {
+            return {
+                needsPull: false,
+                canAutoPull: false,
+                message: "⚠️  Could not get local commit hash, skipping pull check"
+            };
+        }
+
+        // Get remote commit hash (upstream)
+        let remoteHash: string;
+        try {
+            const remoteResult = await execa("git", ["rev-parse", "@{u}"]);
+            remoteHash = remoteResult.stdout.trim();
+        } catch {
+            // No upstream branch configured
+            return {
+                needsPull: false,
+                canAutoPull: false,
+                message: `ℹ️  No upstream branch configured for '${currentBranch}', skipping pull check`
+            };
+        }
+
+        // If local and remote are the same, we're up to date
+        if (localHash === remoteHash) {
+            return {
+                needsPull: false,
+                canAutoPull: false,
+                message: "✅ Local branch is up to date with remote"
+            };
+        }
+
+        // Get merge base (common ancestor)
+        let baseHash: string;
+        try {
+            const baseResult = await execa("git", ["merge-base", "@", "@{u}"]);
+            baseHash = baseResult.stdout.trim();
+        } catch {
+            return {
+                needsPull: true,
+                canAutoPull: false,
+                message: `Repository state is unclear. Please check 'git status' and sync with remote.`
+            };
+        }
+
+        // Determine relationship between local and remote
+        if (localHash === baseHash) {
+            // Local is behind remote (fast-forward possible) - SAFE to auto-pull
+            return {
+                needsPull: true,
+                canAutoPull: true,
+                message: `Local branch '${currentBranch}' is behind remote (will auto-pull).`
+            };
+        } else if (remoteHash === baseHash) {
+            // Local is ahead of remote (no pull needed, but might need push)
+            return {
+                needsPull: false,
+                canAutoPull: false,
+                message: `✅ Local branch '${currentBranch}' is ahead of remote (you may need to push later)`
+            };
+        } else {
+            // Branches have diverged - NOT safe to auto-pull
+            return {
+                needsPull: true,
+                canAutoPull: false,
+                message: `Local branch '${currentBranch}' has diverged from remote. Please run 'git pull --rebase' or 'git pull' to sync.`
+            };
+        }
+    } catch (error) {
+        // If anything unexpected happens, don't block the user
+        return {
+            needsPull: false,
+            canAutoPull: false,
+            message: "⚠️  Could not check pull status, continuing anyway..."
+        };
+    }
 }
 
 /**
