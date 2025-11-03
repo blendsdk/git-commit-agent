@@ -11,7 +11,7 @@ import fs from "fs/promises";
 import path from "path";
 import { tool } from "langchain";
 import { z } from "zod";
-import { validateGitRepo } from "../utils/git-commands.js";
+import { validateGitRepo, validateCommandSyntax } from "../utils/git-commands.js";
 import { GitError, type ToolResult } from "../utils/git-error.js";
 
 /**
@@ -199,6 +199,9 @@ export const execute_git_command_tool = tool(
         try {
             // Validate git repository
             await validateGitRepo();
+
+            // Validate and fix command syntax
+            args = validateCommandSyntax(command, args);
 
             // Special handling for commit command with commitMessage
             if (command === "commit" && commitMessage) {

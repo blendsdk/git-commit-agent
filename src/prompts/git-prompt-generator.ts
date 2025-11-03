@@ -57,6 +57,7 @@ execute_git_command({ command: "status", args: ["--porcelain"] })
 execute_git_command({ command: "diff", args: [] })
 execute_git_command({ command: "diff", args: ["--cached"] })
 execute_git_command({ command: "diff", args: ["--stat"] })
+execute_git_command({ command: "diff", args: ["--unified", "3"] })  // Auto-corrected to --unified=3
 \`\`\`
 
 ### Stage Files:

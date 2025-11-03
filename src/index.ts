@@ -4,17 +4,18 @@
  * @fileoverview Main entry point for the Git Commit Agent CLI tool. This module initializes the LangChain agent
  * with OpenAI integration, parses CLI arguments, loads configuration, and executes the git commit workflow to
  * analyze changes and generate conventional commit messages.
- * 
+ *
  * @module index
  */
 
 import { ChatOpenAI } from "@langchain/openai";
 import { createAgent, HumanMessage } from "langchain";
-import { loadEnvironment } from "./config/env-loader.js";
 import { parseCliArguments } from "./config/cli-parser.js";
 import { loadFinalConfig } from "./config/config-merger.js";
-import { generateSystemPrompt, generateGitPrompt } from "./prompts/index.js";
+import { loadEnvironment } from "./config/env-loader.js";
+import { generateGitPrompt, generateSystemPrompt } from "./prompts/index.js";
 import { execute_git_command_tool } from "./tools/git-master.tool.js";
+import { getGitVersion } from "./utils/git-commands.js";
 
 // ============================================================================
 // CONFIGURATION SETUP
@@ -38,6 +39,19 @@ const cliConfig = parseCliArguments();
 const config = loadFinalConfig(cliConfig);
 
 /**
+ * Detect git version for context in prompts.
+ */
+let gitVersion = "unknown";
+try {
+    gitVersion = await getGitVersion();
+    if (config.verbose) {
+        console.log(`\n🔧 Git version: ${gitVersion}`);
+    }
+} catch (error) {
+    console.warn("⚠️  Could not detect git version, continuing anyway...");
+}
+
+/**
  * Display configuration if verbose mode is enabled.
  */
 if (config.verbose) {
@@ -54,7 +68,7 @@ if (config.verbose) {
 /**
  * Initialize the OpenAI chat model with configuration from environment variables.
  * Falls back to default model if not specified in environment.
- * 
+ *
  * @type {ChatOpenAI}
  */
 const model = new ChatOpenAI({
@@ -64,15 +78,15 @@ const model = new ChatOpenAI({
 });
 
 /**
- * Generate prompts based on configuration.
+ * Generate prompts based on configuration, including git version context.
  */
-const systemPrompt = generateSystemPrompt(config);
+const systemPrompt = generateSystemPrompt(config, gitVersion);
 const gitPrompt = generateGitPrompt(config);
 
 /**
  * Create the LangChain agent with the configured model and git command tool.
  * The agent uses the generated system prompt to understand its role and capabilities.
- * 
+ *
  * @type {Agent}
  */
 const agent = createAgent({
@@ -101,7 +115,7 @@ if (config.verbose) {
 /**
  * Invoke the agent with the generated git commit task prompt.
  * The agent will analyze git changes, generate a commit message, stage files, and commit.
- * 
+ *
  * @type {Promise<AgentResponse>}
  */
 const streamResponse = await agent.invoke({

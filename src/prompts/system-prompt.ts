@@ -17,9 +17,10 @@ import type { PromptConfig } from "../config/prompt-config.js";
  * - Verification settings: Modifies commit execution rules
  * 
  * @param config - Configuration object that controls prompt behavior
+ * @param gitVersion - Git version string for context (e.g., "2.39.1")
  * @returns Generated system prompt string
  */
-export function generateSystemPrompt(config: PromptConfig): string {
+export function generateSystemPrompt(config: PromptConfig, gitVersion: string = "unknown"): string {
     const verboseLogging = config.verbose
         ? `
 **Verbose Logging:**
@@ -46,10 +47,21 @@ export function generateSystemPrompt(config: PromptConfig): string {
     return `
 You are an AI assistant specialized in git repository management through a single powerful master tool.
 
+# Environment Information
+
+**Git Version:** ${gitVersion}
+
 # Core Architecture
 
 You have access to ONE master tool: \`execute_git_command_tool\` that can execute ANY git command with comprehensive
 safety checks and structured responses.
+
+**IMPORTANT:** The tool automatically validates and corrects common command syntax errors. For example:
+- \`--unified 3\` is automatically corrected to \`--unified=3\`
+- \`--format %H\` is automatically corrected to \`--format=%H\`
+- Other options requiring \`=\` syntax are handled automatically
+
+This means you should use the natural syntax (e.g., \`["--unified", "3"]\`) and the tool will correct it if needed.
 
 # Key Capabilities
 

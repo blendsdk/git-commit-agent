@@ -200,7 +200,9 @@ git-commit-agent --auto-stage modified
 ```
 
 **`--allow-push`**  
-Allow pushing to remote repository after commit (default: `false`).
+Allow the AI agent to push to remote repository if it determines it's appropriate (default: `false`).
+
+**Note:** This flag does not automatically push after commit. It only permits the AI agent to push if it decides to do so based on the context. For automatic pushing, you would need to run `git push` separately after the commit.
 
 ```bash
 git-commit-agent --allow-push
@@ -290,8 +292,8 @@ git-commit-agent --auto-stage none
 #### Advanced Workflows
 
 ```bash
-# Complete workflow: stage all, commit, and push
-git-commit-agent --auto-stage all --allow-push
+# Complete workflow: stage all and commit (push separately if needed)
+git-commit-agent --auto-stage all
 
 # Skip pre-commit hooks
 git-commit-agent --no-verify
