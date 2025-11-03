@@ -1,55 +1,29 @@
-export const SYSTEM_PROMPT = `
-You are an AI assistant specialized in git repository management through a single powerful master tool.
+/**
+ * @fileoverview Git commit task prompt for the Git Commit Agent.
+ * Instructs the agent on the complete git commit workflow including
+ * analyzing changes, generating commit messages, and executing commits.
+ * 
+ * @module prompts/git-prompt
+ */
 
-# Core Architecture
-
-You have access to ONE master tool: \`execute_git_command_tool\` that can execute ANY git command with comprehensive safety checks and structured responses.
-
-# Key Capabilities
-
-**Universal Git Command Execution:**
-- Run any git command (status, diff, add, commit, branch, log, etc.)
-- Flexible argument passing for complex operations
-- Structured JSON responses with success/error information
-
-**Safety Features:**
-- Automatic blocking of dangerous commands (reset --hard, push --force, clean -fd, etc.)
-- Optional allowDangerous flag for intentional risky operations
-- Clear error messages with recovery suggestions
-
-**Multi-line Commit Support:**
-- Handles complex commit messages with proper formatting
-- Automatically saves messages to temporary files
-- Uses -F flag for reliable multi-line message handling
-- Supports conventional commit format with body and footer
-
-**Minimal Logging:**
-- Clean console output: ✓ for success, ✗ for errors
-- Format: \`✓ git command args (duration)\`
-- Detailed information in structured JSON responses
-
-# Response Format
-
-All tool executions return structured JSON:
-\`\`\`json
-{
-  "success": true/false,
-  "output": "command output",
-  "error": "error message if failed",
-  "duration": "execution time"
-}
-\`\`\`
-
-# Best Practices
-
-- Always check tool responses for success status
-- Handle errors gracefully with clear user feedback
-- Use appropriate git commands for each operation
-- Follow conventional commit message format
-- Verify operations completed successfully before proceeding
-
-Your role is to intelligently use this master tool to accomplish git operations efficiently and safely.`;
-
+/**
+ * Task prompt that instructs the agent on the complete git commit workflow.
+ * This prompt guides the agent through:
+ * 1. Analyzing repository changes
+ * 2. Generating conventional commit messages
+ * 3. Staging files
+ * 4. Executing the commit
+ * 
+ * The prompt includes:
+ * - Detailed tool usage examples for common git operations
+ * - Step-by-step process for analyzing and committing changes
+ * - Commit message format rules and requirements
+ * - Best practices for multi-line commit messages
+ * - Safety guidelines and validation steps
+ * 
+ * @type {string}
+ * @constant
+ */
 export const GIT_PROMPT = `
 # TASK OBJECTIVES
 Analyze all current changes in the git repository using the master git tool, generate a comprehensive and detailed commit message based on the modifications, stage all changes, and execute the commit. You have access to a single powerful tool that can execute any git command.
@@ -142,16 +116,39 @@ execute_git_command({ command: "log", args: ["-1", "--pretty=format:%H|%an|%s"] 
 ## 3. Generate Comprehensive Commit Message
 
 1. Analyze all identified changes to determine the primary commit type
-2. Create a detailed commit message following conventional commit format:
-   - Type and scope: \`type(scope): brief description\`
-   - Detailed body explaining what changed and why
-   - Footer with any breaking changes or issue references
+2. Create a detailed commit message following conventional commit format with enhanced detail:
+   
+   **First Line (Subject) - Enhanced Format:**
+   - Type and scope: \`type(scope): descriptive summary of what and why\`
+   - Aim for 60-72 characters, but can extend to ~100 chars if needed for clarity
+   - Include the key outcome or purpose, not just the action
+   - Examples:
+     - ✅ GOOD: \`feat(auth): add JWT authentication with refresh token support\`
+     - ✅ GOOD: \`refactor(api): restructure endpoints for better REST compliance\`
+     - ❌ BAD: \`feat(auth): add authentication\`
+     - ❌ BAD: \`refactor(api): update files\`
+   
+   **Body - File-by-File Breakdown:**
+   - Start with a brief overview paragraph explaining the overall change
+   - Then provide a "Changes by File:" section with clear explanations
+   - For each modified file, explain WHAT changed and WHY in plain language
+   - Format example:
+     * Overview paragraph explaining the overall purpose and context
+     * Blank line
+     * "Changes by File:" heading
+     * List each file with: path/to/file.ts: explanation of changes and purpose
+     * Blank line before footer (if any)
+   
+   **Footer:**
+   - Include breaking changes, issue references, or related information
+
 3. Include specific details about:
-   - Files modified and their purpose
-   - Functions/methods added, modified, or removed
-   - Configuration changes
-   - Dependencies added or updated
-   - Impact on existing functionality
+   - **Per-file changes**: What was added, modified, or removed in each file
+   - **Purpose**: Why each change was made (improves X, fixes Y, enables Z)
+   - **Functions/methods**: Key functions added or modified with their purpose
+   - **Configuration changes**: What settings changed and their impact
+   - **Dependencies**: New packages added or updated with reasoning
+   - **Impact**: How these changes affect existing functionality or user experience
 
 ## 4. Stage All Changes
 
@@ -172,26 +169,40 @@ execute_git_command({ command: "log", args: ["-1", "--pretty=format:%H|%an|%s"] 
 ### Commit Message Format Rules:
 
 **REQUIRED STRUCTURE:**
-- Line 1: type(scope): brief description (max 72 chars)
+- Line 1: type(scope): descriptive summary (aim for 60-72 chars, up to ~100 if needed)
 - Line 2: BLANK LINE
-- Line 3+: Body with bullet points (each on NEW LINE)
+- Line 3+: Overview paragraph
 - Line N: BLANK LINE
-- Line N+1: Footer (optional)
+- Line N+1: "Changes by File:" section with per-file explanations
+- Line N+X: BLANK LINE
+- Line N+X+1: Footer (optional - breaking changes, issue refs, etc.)
 
-**CORRECT FORMAT (with actual newlines):**
+**CORRECT FORMAT (with actual newlines and file-by-file details):**
 \`\`\`javascript
 execute_git_command({
   command: "commit",
   args: [],
-  commitMessage: "refactor(tools): extract git tools into separate files
+  commitMessage: "refactor(tools): restructure codebase into modular architecture for better maintainability
 
-- Created modular structure with utils/, tools/, config/ directories
-- Each tool now in its own file for better maintainability
-- Added comprehensive error handling and logging
-- Simplified main index.ts to ~45 lines
+Reorganized the project structure to separate concerns and improve code
+organization. This makes the codebase easier to navigate, test, and extend
+with new features.
 
-This refactoring improves code organization and makes it easier
-to add new tools or modify existing ones independently.
+Changes by File:
+- src/tools/git-master.tool.ts: Extracted git command execution logic into
+  dedicated tool file with comprehensive safety checks and error handling
+- src/utils/git-commands.ts: Created utility functions for common git
+  operations like validateGitRepo() and executeGitCommand()
+- src/utils/git-error.ts: Added custom GitError class for structured error
+  handling with recovery suggestions
+- src/config/env-loader.ts: Separated environment configuration loading to
+  support both global and local .env files
+- src/index.ts: Simplified main entry point to ~45 lines by delegating
+  functionality to specialized modules
+
+This refactoring improves code organization and makes it easier to add new
+tools or modify existing ones independently without affecting other parts
+of the system.
 
 Closes #123"
 })

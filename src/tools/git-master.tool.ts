@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Master git command execution tool for LangChain agents.
+ * Provides a unified interface for executing any git command with comprehensive
+ * safety checks, logging, and multi-line commit message support.
+ * 
+ * @module tools/git-master-tool
+ */
+
 import { execa } from "execa";
 import fs from "fs/promises";
 import path from "path";
@@ -7,17 +15,31 @@ import { validateGitRepo } from "../utils/git-commands.js";
 import { GitError, type ToolResult } from "../utils/git-error.js";
 
 /**
- * Dangerous git commands that should be blocked by default
+ * List of dangerous git commands that should be blocked by default.
+ * These commands can cause data loss or unintended consequences.
+ * 
+ * @constant {string[]}
  */
 const DANGEROUS_COMMANDS = ["reset --hard", "push --force", "push -f", "clean -fd", "clean -f", "rm -rf"];
 
 /**
- * Commands that require extra caution but can be allowed
+ * List of git commands that require extra caution but can be allowed.
+ * These commands modify git history or state in significant ways.
+ * 
+ * @constant {string[]}
  */
 const CAUTION_COMMANDS = ["rebase", "merge", "cherry-pick", "reset"];
 
 /**
- * Check if a command contains dangerous operations
+ * Check if a command contains dangerous operations that could cause data loss.
+ * 
+ * @param {string} command - The git command name (e.g., "reset", "push")
+ * @param {string[]} args - The command arguments
+ * @returns {boolean} True if the command is considered dangerous
+ * 
+ * @example
+ * isDangerousCommand("reset", ["--hard", "HEAD~1"]); // true
+ * isDangerousCommand("status", ["--porcelain"]); // false
  */
 function isDangerousCommand(command: string, args: string[]): boolean {
     const fullCommand = `${command} ${args.join(" ")}`;
@@ -25,14 +47,43 @@ function isDangerousCommand(command: string, args: string[]): boolean {
 }
 
 /**
- * Check if a command requires caution
+ * Check if a command requires extra caution during execution.
+ * 
+ * @param {string} command - The git command name
+ * @returns {boolean} True if the command requires caution
+ * 
+ * @example
+ * requiresCaution("rebase"); // true
+ * requiresCaution("status"); // false
  */
 function requiresCaution(command: string): boolean {
     return CAUTION_COMMANDS.includes(command);
 }
 
 /**
- * Log git command execution details (minimal format)
+ * Log git command execution details in a minimal, user-friendly format.
+ * Outputs a single line with success/failure indicator, command, and duration.
+ * Only shows detailed error information on failure.
+ * 
+ * @param {Object} data - Execution data to log
+ * @param {string} data.command - The git command that was executed
+ * @param {string[]} data.args - The command arguments
+ * @param {number} data.startTime - Execution start timestamp (ms)
+ * @param {number} data.endTime - Execution end timestamp (ms)
+ * @param {boolean} data.success - Whether the command succeeded
+ * @param {string} [data.stdout] - Standard output from the command
+ * @param {string} [data.stderr] - Standard error from the command
+ * @param {any} [data.error] - Error object if command failed
+ * 
+ * @example
+ * logExecution({
+ *   command: "status",
+ *   args: ["--porcelain"],
+ *   startTime: 1234567890,
+ *   endTime: 1234567935,
+ *   success: true
+ * });
+ * // Output: ✓ git status --porcelain (45ms)
  */
 function logExecution(data: {
     command: string;
@@ -58,7 +109,77 @@ function logExecution(data: {
 }
 
 /**
- * Master Git Tool - Execute any git command with safety checks and logging
+ * Master git command execution tool for LangChain agents.
+ * 
+ * This is the primary tool for executing any git command with comprehensive safety checks,
+ * automatic logging, and special handling for multi-line commit messages.
+ * 
+ * Key Features:
+ * - Executes any git command with flexible argument passing
+ * - Automatic validation that current directory is a git repository
+ * - Safety checks to block dangerous commands by default
+ * - Special handling for commit messages (saves to temp file, uses -F flag)
+ * - Structured JSON responses with success/error information
+ * - Minimal console logging (✓/✗ with duration)
+ * - Automatic cleanup of temporary files
+ * 
+ * Safety Features:
+ * - Blocks dangerous commands (reset --hard, push --force, etc.) unless explicitly allowed
+ * - Warns about commands requiring caution (rebase, merge, etc.)
+ * - 30-second timeout for all commands
+ * - Comprehensive error handling with recovery suggestions
+ * 
+ * @async
+ * @param {Object} params - Tool parameters
+ * @param {string} params.command - Git command to execute (e.g., "status", "commit", "diff")
+ * @param {string[]} params.args - Command arguments (e.g., ["--porcelain"], ["."])
+ * @param {boolean} [params.allowDangerous=false] - Allow dangerous commands that could cause data loss
+ * @param {string} [params.commitMessage] - Multi-line commit message (for commit command only)
+ * 
+ * @returns {Promise<string>} JSON string containing ToolResult with success/error information
+ * 
+ * @example
+ * // Check repository status
+ * const result = await execute_git_command_tool({
+ *   command: "status",
+ *   args: ["--porcelain"]
+ * });
+ * 
+ * @example
+ * // Stage all files
+ * const result = await execute_git_command_tool({
+ *   command: "add",
+ *   args: ["."]
+ * });
+ * 
+ * @example
+ * // Commit with multi-line message
+ * const result = await execute_git_command_tool({
+ *   command: "commit",
+ *   args: [],
+ *   commitMessage: `feat(auth): add login functionality
+ * 
+ * - Implemented JWT authentication
+ * - Added password hashing with bcrypt
+ * - Created login and logout endpoints
+ * 
+ * Closes #123`
+ * });
+ * 
+ * @example
+ * // Get diff statistics
+ * const result = await execute_git_command_tool({
+ *   command: "diff",
+ *   args: ["--stat"]
+ * });
+ * 
+ * @example
+ * // Allow dangerous command (use with caution!)
+ * const result = await execute_git_command_tool({
+ *   command: "reset",
+ *   args: ["--hard", "HEAD~1"],
+ *   allowDangerous: true
+ * });
  */
 export const execute_git_command_tool = tool(
     async ({
