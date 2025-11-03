@@ -1,13 +1,13 @@
 /**
- * @fileoverview Prompts module for the Git Commit Agent.
- * Exports all prompts used by the agent for easy importing.
- * 
- * This module provides:
- * - SYSTEM_PROMPT: Defines the agent's role and capabilities
- * - GIT_PROMPT: Instructions for the git commit workflow
+ * @fileoverview Central export point for all prompt templates and generators used by the Git Commit Agent.
  * 
  * @module prompts
  */
 
+// Export generator functions (recommended)
+export { generateSystemPrompt } from "./system-prompt.js";
+export { generateGitPrompt } from "./git-prompt-generator.js";
+
+// Export legacy constants for backward compatibility
 export { SYSTEM_PROMPT } from "./system-prompt.js";
 export { GIT_PROMPT } from "./git-prompt.js";

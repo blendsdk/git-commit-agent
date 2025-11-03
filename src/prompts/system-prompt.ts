@@ -5,21 +5,45 @@
  * @module prompts/system-prompt
  */
 
+import type { PromptConfig } from "../config/prompt-config.js";
+
 /**
- * System prompt that defines the agent's role, capabilities, and tool usage. This prompt configures the agent as a
- * git repository management specialist with access to a master git command execution tool.
+ * Generate system prompt that defines the agent's role, capabilities, and tool usage. This prompt configures the
+ * agent as a git repository management specialist with access to a master git command execution tool.
  * 
- * Key features defined:
- * - Universal git command execution through a single master tool
- * - Safety features for dangerous commands
- * - Multi-line commit message support
- * - Structured JSON response format
- * - Minimal logging with clear success/error indicators
+ * The prompt adapts based on configuration:
+ * - Verbose mode: Includes detailed logging instructions
+ * - Push permissions: Adjusts safety guidelines
+ * - Verification settings: Modifies commit execution rules
  * 
- * @type {string}
- * @constant
+ * @param config - Configuration object that controls prompt behavior
+ * @returns Generated system prompt string
  */
-export const SYSTEM_PROMPT = `
+export function generateSystemPrompt(config: PromptConfig): string {
+    const verboseLogging = config.verbose
+        ? `
+**Verbose Logging:**
+- Provide detailed output for each operation
+- Include command arguments and execution details
+- Show intermediate steps and decision-making process`
+        : `
+**Minimal Logging:**
+- Clean console output: ✓ for success, ✗ for errors
+- Format: \`✓ git command args (duration)\`
+- Detailed information in structured JSON responses`;
+
+    const pushGuidelines = config.allowPush
+        ? `
+**Push Operations:**
+- Pushing to remote repositories is ALLOWED when requested
+- Always confirm branch and remote before pushing
+- Use appropriate push flags based on the situation`
+        : `
+**Push Operations:**
+- DO NOT attempt to push commits to remote repositories
+- Focus only on local commit operations`;
+
+    return `
 You are an AI assistant specialized in git repository management through a single powerful master tool.
 
 # Core Architecture
@@ -70,4 +94,26 @@ All tool executions return structured JSON:
 - Follow conventional commit message format
 - Verify operations completed successfully before proceeding
 
-Your role is to intelligently use this master tool to accomplish git operations efficiently and safely.`;
+${verboseLogging}
+
+${pushGuidelines}
+
+Your role is to intelligently use this master tool to accomplish git operations efficiently and safely.
+`;
+}
+
+/**
+ * Legacy export for backward compatibility. Uses default configuration.
+ * @deprecated Use generateSystemPrompt(config) instead
+ */
+export const SYSTEM_PROMPT = generateSystemPrompt({
+    subjectMaxLength: 72,
+    detailLevel: "normal",
+    includeFileBreakdown: true,
+    autoStage: "all",
+    allowPush: false,
+    skipVerification: false,
+    conventionalStrict: true,
+    dryRun: false,
+    verbose: false
+});
