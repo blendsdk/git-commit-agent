@@ -139,8 +139,8 @@ ${executionInstructions}
 - The tool returns structured JSON with success/error information
 
 DO NOT return any explanations or additional text outside of the commit message and tool outputs.
-DO NOT suggest any further actions beyond the commit.
-${config.allowPush ? "You MAY push the commit if explicitly requested." : "DO NOT attempt to push the commit or interact with remote repositories."}
+DO NOT suggest any further actions beyond the commit${config.push ? ", except for pushing" : ""}.
+${config.push ? "After successfully committing, you MUST automatically push the commit to the remote repository using: execute_git_command({ command: \"push\", args: [] }). This is REQUIRED when --push is enabled." : "DO NOT attempt to push the commit or interact with remote repositories."}
 
 Perform the above steps methodically using the master git tool to ensure a clean, well-documented commit.
 `;

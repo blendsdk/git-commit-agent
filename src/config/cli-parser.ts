@@ -64,7 +64,7 @@ export function parseCliArguments(): Partial<PromptConfig> {
         // ============================================================================
         // BEHAVIOR CONTROL OPTIONS
         // ============================================================================
-        .group(["auto-stage", "allow-push", "no-verify", "conventional-strict"], "Behavior Controls:")
+        .group(["auto-stage", "push", "no-verify", "conventional-strict"], "Behavior Controls:")
 
         .option("auto-stage", {
             type: "string",
@@ -72,9 +72,9 @@ export function parseCliArguments(): Partial<PromptConfig> {
             choices: ["all", "modified", "none"]
         })
 
-        .option("allow-push", {
+        .option("push", {
             type: "boolean",
-            description: "Allow pushing after commit",
+            description: "Push changes to remote repository after committing",
             default: undefined
         })
 
@@ -119,7 +119,7 @@ export function parseCliArguments(): Partial<PromptConfig> {
         .example("$0 --commit-type feat --scope auth", "Force commit type and scope")
         .example("$0 --detail-level brief --no-file-breakdown", "Brief commit message")
         .example("$0 --dry-run", "Preview commit message without committing")
-        .example("$0 --auto-stage all --allow-push", "Stage all files and push")
+        .example("$0 --auto-stage all --push", "Stage all files and push")
         .example("$0 --verbose", "Enable verbose output for debugging")
 
         .epilogue("For more information, visit: https://github.com/blendsdk/git-commit-agent")
@@ -163,8 +163,8 @@ export function parseCliArguments(): Partial<PromptConfig> {
         config.autoStage = argv.autoStage as "all" | "modified" | "none";
     }
 
-    if (argv.allowPush !== undefined) {
-        config.allowPush = argv.allowPush;
+    if (argv.push !== undefined) {
+        config.push = argv.push;
     }
 
     if (argv.noVerify !== undefined) {

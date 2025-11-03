@@ -33,7 +33,7 @@ export function generateSystemPrompt(config: PromptConfig, gitVersion: string = 
 - Format: \`✓ git command args (duration)\`
 - Detailed information in structured JSON responses`;
 
-    const pushGuidelines = config.allowPush
+    const pushGuidelines = config.push
         ? `
 **Push Operations:**
 - Pushing to remote repositories is ALLOWED when requested
@@ -123,7 +123,7 @@ export const SYSTEM_PROMPT = generateSystemPrompt({
     detailLevel: "normal",
     includeFileBreakdown: true,
     autoStage: "all",
-    allowPush: false,
+    push: false,
     skipVerification: false,
     conventionalStrict: true,
     dryRun: false,

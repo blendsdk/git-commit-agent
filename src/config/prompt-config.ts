@@ -61,10 +61,10 @@ export interface PromptConfig {
   autoStage: 'all' | 'modified' | 'none';
   
   /**
-   * Whether to allow pushing after commit.
+   * Whether to push changes to remote repository after committing.
    * @default false
    */
-  allowPush: boolean;
+  push: boolean;
   
   /**
    * Skip commit verification hooks.
@@ -106,7 +106,7 @@ export const DEFAULT_CONFIG: PromptConfig = {
   
   // Behavior
   autoStage: 'all',              // Stage all changes including untracked files
-  allowPush: false,              // Keep safe default
+  push: false,                   // Safe default - only push when explicitly requested
   skipVerification: false,       // Keep safe default
   conventionalStrict: true,      // Enforce good practices
   

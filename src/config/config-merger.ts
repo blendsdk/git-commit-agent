@@ -52,8 +52,8 @@ export function loadConfigFromEnv(): Partial<PromptConfig> {
         }
     }
 
-    if (process.env.ALLOW_PUSH) {
-        config.allowPush = process.env.ALLOW_PUSH.toLowerCase() === "true";
+    if (process.env.PUSH) {
+        config.push = process.env.PUSH.toLowerCase() === "true";
     }
 
     if (process.env.SKIP_VERIFICATION) {
@@ -100,7 +100,7 @@ export function mergeConfigs(cliConfig: Partial<PromptConfig>, envConfig: Partia
 
         // Behavior - CLI > ENV > Default
         autoStage: cliConfig.autoStage ?? envConfig.autoStage ?? DEFAULT_CONFIG.autoStage,
-        allowPush: cliConfig.allowPush ?? envConfig.allowPush ?? DEFAULT_CONFIG.allowPush,
+        push: cliConfig.push ?? envConfig.push ?? DEFAULT_CONFIG.push,
         skipVerification: cliConfig.skipVerification ?? envConfig.skipVerification ?? DEFAULT_CONFIG.skipVerification,
         conventionalStrict:
             cliConfig.conventionalStrict ?? envConfig.conventionalStrict ?? DEFAULT_CONFIG.conventionalStrict,

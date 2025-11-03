@@ -85,7 +85,7 @@ COMMIT_FILE_BREAKDOWN=true
 
 # Optional - Behavior defaults
 AUTO_STAGE=all
-ALLOW_PUSH=false
+PUSH=false
 SKIP_VERIFICATION=false
 CONVENTIONAL_STRICT=true
 
@@ -199,13 +199,13 @@ Choices: `all`, `modified`, `none` (default: `all`)
 git-commit-agent --auto-stage modified
 ```
 
-**`--allow-push`**  
-Allow the AI agent to push to remote repository if it determines it's appropriate (default: `false`).
+**`--push`**  
+Push changes to remote repository after committing (default: `false`).
 
-**Note:** This flag does not automatically push after commit. It only permits the AI agent to push if it decides to do so based on the context. For automatic pushing, you would need to run `git push` separately after the commit.
+When this flag is set, the system will automatically push the commit to the remote repository after successfully committing locally. Without this flag, commits remain local only.
 
 ```bash
-git-commit-agent --allow-push
+git-commit-agent --push
 ```
 
 **`--no-verify`**  
@@ -292,7 +292,10 @@ git-commit-agent --auto-stage none
 #### Advanced Workflows
 
 ```bash
-# Complete workflow: stage all and commit (push separately if needed)
+# Complete workflow: stage all, commit, and push
+git-commit-agent --auto-stage all --push
+
+# Complete workflow: stage all and commit (without pushing)
 git-commit-agent --auto-stage all
 
 # Skip pre-commit hooks
@@ -352,14 +355,14 @@ COMMIT_SUBJECT_MAX_LENGTH=72
 For automated commits in CI/CD:
 
 ```bash
-git-commit-agent --auto-stage all --no-verify --allow-push --detail-level normal
+git-commit-agent --auto-stage all --no-verify --push --detail-level normal
 ```
 
 Or in `.env`:
 ```env
 AUTO_STAGE=all
 SKIP_VERIFICATION=true
-ALLOW_PUSH=true
+PUSH=true
 COMMIT_DETAIL_LEVEL=normal
 ```
 
