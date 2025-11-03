@@ -1,14 +1,12 @@
 /**
- * @fileoverview Git commit task prompt for the Git Commit Agent.
- * Instructs the agent on the complete git commit workflow including
- * analyzing changes, generating commit messages, and executing commits.
+ * @fileoverview Git commit task prompt for the Git Commit Agent. Instructs the agent on the complete git commit
+ * workflow including analyzing changes, generating commit messages, and executing commits.
  * 
  * @module prompts/git-prompt
  */
 
 /**
- * Task prompt that instructs the agent on the complete git commit workflow.
- * This prompt guides the agent through:
+ * Task prompt that instructs the agent on the complete git commit workflow. This prompt guides the agent through:
  * 1. Analyzing repository changes
  * 2. Generating conventional commit messages
  * 3. Staging files
@@ -26,7 +24,9 @@
  */
 export const GIT_PROMPT = `
 # TASK OBJECTIVES
-Analyze all current changes in the git repository using the master git tool, generate a comprehensive and detailed commit message based on the modifications, stage all changes, and execute the commit. You have access to a single powerful tool that can execute any git command.
+Analyze all current changes in the git repository using the master git tool, generate a comprehensive and detailed
+commit message based on the modifications, stage all changes, and execute the commit. You have access to a single
+powerful tool that can execute any git command.
 
 # Master Git Tool Usage
 
@@ -184,25 +184,21 @@ execute_git_command({
   args: [],
   commitMessage: "refactor(tools): restructure codebase into modular architecture for better maintainability
 
-Reorganized the project structure to separate concerns and improve code
-organization. This makes the codebase easier to navigate, test, and extend
-with new features.
+Reorganized the project structure to separate concerns and improve code organization. This makes the codebase
+easier to navigate, test, and extend with new features.
 
 Changes by File:
-- src/tools/git-master.tool.ts: Extracted git command execution logic into
-  dedicated tool file with comprehensive safety checks and error handling
-- src/utils/git-commands.ts: Created utility functions for common git
-  operations like validateGitRepo() and executeGitCommand()
-- src/utils/git-error.ts: Added custom GitError class for structured error
-  handling with recovery suggestions
-- src/config/env-loader.ts: Separated environment configuration loading to
-  support both global and local .env files
-- src/index.ts: Simplified main entry point to ~45 lines by delegating
-  functionality to specialized modules
+- src/tools/git-master.tool.ts: Extracted git command execution logic into dedicated tool file with
+  comprehensive safety checks and error handling
+- src/utils/git-commands.ts: Created utility functions for common git operations like validateGitRepo() and
+  executeGitCommand()
+- src/utils/git-error.ts: Added custom GitError class for structured error handling with recovery suggestions
+- src/config/env-loader.ts: Separated environment configuration loading to support both global and local .env
+  files
+- src/index.ts: Simplified main entry point to ~45 lines by delegating functionality to specialized modules
 
-This refactoring improves code organization and makes it easier to add new
-tools or modify existing ones independently without affecting other parts
-of the system.
+This refactoring improves code organization and makes it easier to add new tools or modify existing ones
+independently without affecting other parts of the system.
 
 Closes #123"
 })

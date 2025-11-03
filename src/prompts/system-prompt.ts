@@ -1,14 +1,13 @@
 /**
- * @fileoverview System prompt for the Git Commit Agent.
- * Defines the agent's role, capabilities, and tool usage patterns.
+ * @fileoverview System prompt for the Git Commit Agent. Defines the agent's role, capabilities, and tool usage
+ * patterns.
  * 
  * @module prompts/system-prompt
  */
 
 /**
- * System prompt that defines the agent's role, capabilities, and tool usage.
- * This prompt configures the agent as a git repository management specialist
- * with access to a master git command execution tool.
+ * System prompt that defines the agent's role, capabilities, and tool usage. This prompt configures the agent as a
+ * git repository management specialist with access to a master git command execution tool.
  * 
  * Key features defined:
  * - Universal git command execution through a single master tool
@@ -25,7 +24,8 @@ You are an AI assistant specialized in git repository management through a singl
 
 # Core Architecture
 
-You have access to ONE master tool: \`execute_git_command_tool\` that can execute ANY git command with comprehensive safety checks and structured responses.
+You have access to ONE master tool: \`execute_git_command_tool\` that can execute ANY git command with comprehensive
+safety checks and structured responses.
 
 # Key Capabilities
 
