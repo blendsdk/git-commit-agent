@@ -130,6 +130,8 @@ ${executionInstructions}
 2. Confirm the commit message follows conventional commit standards
 3. Present a summary of what was committed
 
+${generatePushInstructions(config)}
+
 # Important Notes
 
 - All git commands are logged with timestamps, arguments, and results
@@ -139,17 +141,22 @@ ${executionInstructions}
 - The tool returns structured JSON with success/error information
 
 DO NOT return any explanations or additional text outside of the commit message and tool outputs.
-DO NOT suggest any further actions beyond the commit${config.push ? ", except for pushing" : ""}.
-${config.push ? "After successfully committing, you MUST automatically push the commit to the remote repository using: execute_git_command({ command: \"push\", args: [] }). This is REQUIRED when --push is enabled." : "DO NOT attempt to push the commit or interact with remote repositories."}
 
 Perform the above steps methodically using the master git tool to ensure a clean, well-documented commit.
 `;
 }
 
 function generateTaskObjectives(config: PromptConfig): string {
-    const typeInstruction = config.commitType ? `using commit type "${config.commitType}"` : "determining the appropriate commit type";
+    const typeInstruction = config.commitType
+        ? `using commit type "${config.commitType}"`
+        : "determining the appropriate commit type";
     const scopeInstruction = config.scope ? `with scope "${config.scope}"` : "";
-    const detailInstruction = config.detailLevel === "brief" ? "brief" : config.detailLevel === "detailed" ? "comprehensive and detailed" : "clear and informative";
+    const detailInstruction =
+        config.detailLevel === "brief"
+            ? "brief"
+            : config.detailLevel === "detailed"
+            ? "comprehensive and detailed"
+            : "clear and informative";
 
     return `Analyze all current changes in the git repository using the master git tool, generate a ${detailInstruction} commit message ${typeInstruction} ${scopeInstruction} based on the modifications, stage changes as configured, and execute the commit. You have access to a single powerful tool that can execute any git command.`;
 }
@@ -172,16 +179,32 @@ function generateCommitMessageRules(config: PromptConfig): string {
    **Body - Detailed Format:**
    - Start with a comprehensive overview paragraph explaining the overall change
    - Provide extensive context about the motivation and impact
-   - ${includeFileBreakdown ? 'Include a "Changes by File:" section with detailed explanations' : "Describe changes organized by functional area"}
-   - ${includeFileBreakdown ? "For each modified file, explain WHAT changed and WHY in detail" : "Group related changes together with clear explanations"}
+   - ${
+       includeFileBreakdown
+           ? 'Include a "Changes by File:" section with detailed explanations'
+           : "Describe changes organized by functional area"
+   }
+   - ${
+       includeFileBreakdown
+           ? "For each modified file, explain WHAT changed and WHY in detail"
+           : "Group related changes together with clear explanations"
+   }
    - Include technical details about implementation choices`;
     } else {
         // normal
         detailInstructions = `
    **Body - Standard Format:**
    - Start with a brief overview paragraph explaining the overall change
-   - ${includeFileBreakdown ? 'Provide a "Changes by File:" section with clear explanations' : "Describe the key changes made"}
-   - ${includeFileBreakdown ? "For each modified file, explain WHAT changed and WHY in plain language" : "Focus on the most important modifications"}
+   - ${
+       includeFileBreakdown
+           ? 'Provide a "Changes by File:" section with clear explanations'
+           : "Describe the key changes made"
+   }
+   - ${
+       includeFileBreakdown
+           ? "For each modified file, explain WHAT changed and WHY in plain language"
+           : "Focus on the most important modifications"
+   }
    - Keep descriptions clear and to the point`;
     }
 
@@ -191,11 +214,17 @@ function generateCommitMessageRules(config: PromptConfig): string {
 
     return `## 3. Generate Commit Message
 
-1. Analyze all identified changes to determine the primary commit type${config.commitType ? ` (use "${config.commitType}" as specified)` : ""}
+1. Analyze all identified changes to determine the primary commit type${
+        config.commitType ? ` (use "${config.commitType}" as specified)` : ""
+    }
 2. Create a ${detailLevel} commit message following conventional commit format:
    
    **First Line (Subject):**
-   - ${config.commitType ? `Type: "${config.commitType}"` : "Type: Choose from (feat, fix, refactor, docs, test, build, ci, perf, style, chore)"}
+   - ${
+       config.commitType
+           ? `Type: "${config.commitType}"`
+           : "Type: Choose from (feat, fix, refactor, docs, test, build, ci, perf, style, chore)"
+   }
    - ${config.scope ? `Scope: "${config.scope}"` : "Scope: Determine from changes (optional)"}
    - Format: \`type${config.scope ? `(${config.scope})` : "(scope)"}: descriptive summary\`
    - Maximum length: ${subjectLength} characters
@@ -207,11 +236,33 @@ ${detailInstructions}
    - Include breaking changes, issue references, or related information
    - ${conventionalNote}
 
-3. ${detailLevel === "detailed" ? "Include extensive details about:" : detailLevel === "brief" ? "Include only essential information about:" : "Include key details about:"}
-   - ${detailLevel === "detailed" ? "**Per-file changes**: Comprehensive description of what was added, modified, or removed" : "**Key changes**: What was modified and why"}
-   - ${detailLevel === "detailed" ? "**Purpose**: Detailed explanation of why each change was made" : "**Purpose**: Brief explanation of the change motivation"}
-   - ${detailLevel === "detailed" ? "**Functions/methods**: All significant functions added or modified with their purpose" : "**Functions/methods**: Major functions added or modified"}
-   - ${detailLevel === "detailed" ? "**Impact**: Comprehensive analysis of how changes affect functionality" : "**Impact**: How changes affect the system"}`;
+3. ${
+        detailLevel === "detailed"
+            ? "Include extensive details about:"
+            : detailLevel === "brief"
+            ? "Include only essential information about:"
+            : "Include key details about:"
+    }
+   - ${
+       detailLevel === "detailed"
+           ? "**Per-file changes**: Comprehensive description of what was added, modified, or removed"
+           : "**Key changes**: What was modified and why"
+   }
+   - ${
+       detailLevel === "detailed"
+           ? "**Purpose**: Detailed explanation of why each change was made"
+           : "**Purpose**: Brief explanation of the change motivation"
+   }
+   - ${
+       detailLevel === "detailed"
+           ? "**Functions/methods**: All significant functions added or modified with their purpose"
+           : "**Functions/methods**: Major functions added or modified"
+   }
+   - ${
+       detailLevel === "detailed"
+           ? "**Impact**: Comprehensive analysis of how changes affect functionality"
+           : "**Impact**: How changes affect the system"
+   }`;
 }
 
 function generateStagingInstructions(config: PromptConfig): string {
@@ -237,7 +288,11 @@ function generateStagingInstructions(config: PromptConfig): string {
 
 1. ${stagingDescription}
 2. ${config.autoStage !== "none" ? "Use `execute_git_command` with appropriate staging command" : "Skip to commit step"}
-3. ${config.autoStage !== "none" ? "Verify staging was successful by checking the tool response" : "Verify that files are already staged"}
+3. ${
+        config.autoStage !== "none"
+            ? "Verify staging was successful by checking the tool response"
+            : "Verify that files are already staged"
+    }
 
 **Staging Command:**
 \`\`\`
@@ -274,9 +329,17 @@ ${dryRunNote}
 ### Commit Message Format Rules:
 
 **REQUIRED STRUCTURE:**
-- Line 1: type${config.scope ? `(${config.scope})` : "(scope)"}: descriptive summary (max ${config.subjectMaxLength} chars)
+- Line 1: type${config.scope ? `(${config.scope})` : "(scope)"}: descriptive summary (max ${
+        config.subjectMaxLength
+    } chars)
 - Line 2: BLANK LINE
-- Line 3+: ${config.detailLevel === "brief" ? "Brief description" : config.detailLevel === "detailed" ? "Detailed overview and file-by-file breakdown" : "Overview and key changes"}
+- Line 3+: ${
+        config.detailLevel === "brief"
+            ? "Brief description"
+            : config.detailLevel === "detailed"
+            ? "Detailed overview and file-by-file breakdown"
+            : "Overview and key changes"
+    }
 - Line N: BLANK LINE
 - Line N+1: Footer (optional - breaking changes, issue refs, etc.)
 
@@ -299,6 +362,39 @@ Footer if needed"
 - Blank lines separate sections (subject, body, footer)
 - The commitMessage string should contain actual line breaks
 
-${config.dryRun ? "7. **STOP HERE** - Do not execute the commit in dry run mode" : "7. Verify the commit was created successfully"}
-${config.dryRun ? "" : "8. Optionally get commit details with \"log\" command"}`;
+${
+    config.dryRun
+        ? "7. **STOP HERE** - Do not execute the commit in dry run mode"
+        : "7. Verify the commit was created successfully"
+}
+${config.dryRun ? "" : '8. Optionally get commit details with "log" command'}`;
+}
+
+function generatePushInstructions(config: PromptConfig): string {
+    if (!config.push) {
+        return `
+## 7. Push to Remote (DISABLED)
+
+**DO NOT push to remote repository** - The --push flag was not set.
+- Commits remain local only
+- DO NOT attempt to interact with remote repositories
+- DO NOT suggest pushing as a next step`;
+    }
+
+    return `
+## 7. Push to Remote (REQUIRED)
+
+**CRITICAL: You MUST push the commit to the remote repository after successful commit.**
+
+1. After the commit is successfully created, immediately execute the push command
+2. Use \`execute_git_command\` with "push" command
+3. Verify the push was successful by checking the tool response
+4. If push fails, report the error to the user
+
+**Push Command:**
+\`\`\`
+execute_git_command({ command: "push", args: [] })
+\`\`\`
+
+**This step is MANDATORY when --push flag is enabled. Do not skip this step.**`;
 }
