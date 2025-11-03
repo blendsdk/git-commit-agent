@@ -4,12 +4,12 @@ AI-powered git commit message generator using LangChain and OpenAI. Automaticall
 
 ## Features
 
--   🤖 **AI-Powered Analysis** - Uses OpenAI to understand code changes
--   📝 **Conventional Commits** - Generates standardized commit messages
--   🔍 **Smart Detection** - Identifies commit type, scope, and impact
--   🛡️ **Error Handling** - Comprehensive error handling with recovery suggestions
--   🌍 **Global Configuration** - Support for user-wide settings via `~/.agent-config`
--   🚀 **CI/CD Ready** - GitHub Actions workflow for automated builds and releases
+- 🤖 **AI-Powered Analysis** - Uses OpenAI to understand code changes
+- 📝 **Conventional Commits** - Generates standardized commit messages
+- 🔍 **Smart Detection** - Identifies commit type, scope, and impact
+- ⚙️ **Flexible Configuration** - CLI options, environment variables, and global config
+- 🛡️ **Error Handling** - Comprehensive error handling with recovery suggestions
+- 🌍 **Global Configuration** - Support for user-wide settings via `~/.agent-config`
 
 ## Installation
 
@@ -27,7 +27,7 @@ yarn global add @blendsdk/git-commit-agent
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/git-commit-agent.git
+git clone https://github.com/blendsdk/git-commit-agent.git
 cd git-commit-agent
 
 # Install dependencies
@@ -36,9 +36,28 @@ yarn install
 # Build
 yarn build
 
-# Run
-yarn start
+# Link globally for testing
+yarn link
 ```
+
+## Quick Start
+
+```bash
+# Navigate to your git repository
+cd your-project
+
+# Make some changes
+# ... edit files ...
+
+# Run the agent
+git-commit-agent
+```
+
+The agent will:
+1. Analyze all changes in your repository
+2. Generate a comprehensive conventional commit message
+3. Stage all changes (configurable)
+4. Create the commit with proper multi-line formatting
 
 ## Configuration
 
@@ -50,12 +69,29 @@ Create a `.env` file in your project root or `~/.agent-config` in your home dire
 # Required
 OPENAI_API_KEY=your_openai_api_key_here
 
-# Optional - Model configuration (defaults to gpt-5-nano-2025-08-07)
-OPENAI_MODEL=gpt-5-nano-2025-08-07
+# Optional - Model configuration
+OPENAI_MODEL=gpt-4
 
 # Optional - LangChain configuration
 LANGCHAIN_TRACING_V2=true
 LANGCHAIN_API_KEY=your_langchain_api_key
+
+# Optional - Commit format defaults
+COMMIT_TYPE=feat
+COMMIT_SCOPE=api
+COMMIT_SUBJECT_MAX_LENGTH=72
+COMMIT_DETAIL_LEVEL=normal
+COMMIT_FILE_BREAKDOWN=true
+
+# Optional - Behavior defaults
+AUTO_STAGE=all
+ALLOW_PUSH=false
+SKIP_VERIFICATION=false
+CONVENTIONAL_STRICT=true
+
+# Optional - Execution defaults
+DRY_RUN=false
+VERBOSE=false
 ```
 
 ### Global Configuration
@@ -72,74 +108,257 @@ echo OPENAI_API_KEY=your_key_here > %USERPROFILE%\.agent-config
 
 **Note:** Local `.env` files override global settings.
 
+### Configuration Priority
+
+Configuration values are merged from three sources:
+
+1. **CLI Arguments** (highest priority)
+2. **Environment Variables** (from `.env` file)
+3. **Built-in Defaults** (lowest priority)
+
 ## Usage
 
-### Command Line Usage
-
-After installation, the `git-commit-agent` command will be available globally:
+### Basic Commands
 
 ```bash
-# Navigate to your git repository
-cd your-project
-
-# Make some changes
-# ... edit files ...
-
-# Run the agent from anywhere
-git-commit-agent
-```
-
-### Testing Local Installation
-
-Before publishing, you can test the CLI locally:
-
-```bash
-# Link the package globally
-npm link
-# or
-yarn link
-
-# Now test the command from any directory
-cd /path/to/any/git/repo
+# Use default configuration
 git-commit-agent
 
-# When done testing, unlink
-npm unlink -g @blendsdk/git-commit-agent
-# or
-yarn unlink @blendsdk/git-commit-agent
+# Preview commit message without committing
+git-commit-agent --dry-run
+
+# Enable verbose output for debugging
+git-commit-agent --verbose
+
+# Get help
+git-commit-agent --help
+
+# Show version
+git-commit-agent --version
 ```
 
-### Running from Source
+### CLI Options
 
-If you're developing or haven't installed globally:
+#### Commit Message Format
+
+**`--commit-type <type>`**  
+Force a specific commit type instead of letting the agent determine it.
+
+Choices: `feat`, `fix`, `refactor`, `docs`, `test`, `build`, `ci`, `perf`, `style`, `chore`
 
 ```bash
-# From the project directory
-yarn start
+git-commit-agent --commit-type feat
 ```
 
-The agent will:
-
-1. Analyze all changes in your repository using the master git tool
-2. Generate a comprehensive conventional commit message
-3. Stage all changes
-4. Create the commit with proper multi-line formatting
-
-**Features:**
-- Single powerful tool that can execute any git command
-- Comprehensive error handling with validation and recovery suggestions
-- Safety checks block dangerous commands (reset --hard, push --force, etc.)
-- Minimal, informational console logging
-- Multi-line commit message support with proper formatting
-
-### Development Mode
+**`--scope <scope>`**  
+Set the commit scope (e.g., auth, api, ui).
 
 ```bash
-# Watch mode - rebuilds on file changes
-yarn dev
+git-commit-agent --scope auth
+```
 
-# In another terminal
-yarn go
+**`--subject-max-length <number>`**  
+Maximum length for the commit subject line (default: 72).
+
+```bash
+git-commit-agent --subject-max-length 50
+```
+
+**`--detail-level <level>`**  
+Control the level of detail in the commit message body.
+
+Choices: `brief`, `normal`, `detailed` (default: `normal`)
+
+- `brief`: Minimal description (1-2 sentences)
+- `normal`: Standard description with key changes
+- `detailed`: Comprehensive description with file-by-file breakdown
+
+```bash
+git-commit-agent --detail-level detailed
+```
+
+**`--file-breakdown` / `--no-file-breakdown`**  
+Include or exclude file-by-file breakdown in the commit body (default: `true`).
+
+```bash
+git-commit-agent --no-file-breakdown
+```
+
+#### Behavior Controls
+
+**`--auto-stage <mode>`**  
+Control automatic staging behavior before commit.
+
+Choices: `all`, `modified`, `none` (default: `all`)
+
+- `all`: Stage all changes including untracked files (`git add .`)
+- `modified`: Stage only modified and deleted files (`git add -u`)
+- `none`: Don't stage anything, commit only what's already staged
+
+```bash
+git-commit-agent --auto-stage modified
+```
+
+**`--allow-push`**  
+Allow pushing to remote repository after commit (default: `false`).
+
+```bash
+git-commit-agent --allow-push
+```
+
+**`--no-verify`**  
+Skip commit verification hooks (pre-commit, commit-msg) (default: `false`).
+
+```bash
+git-commit-agent --no-verify
+```
+
+**`--conventional-strict`**  
+Enforce strict conventional commit format (default: `true`).
+
+```bash
+git-commit-agent --conventional-strict
+```
+
+#### Execution Options
+
+**`--dry-run`**  
+Analyze changes and generate commit message without actually committing (default: `false`).
+
+```bash
+git-commit-agent --dry-run
+```
+
+**`--verbose`**  
+Enable verbose logging to see detailed execution information (default: `false`).
+
+```bash
+git-commit-agent --verbose
+```
+
+**`--config <path>`**  
+Path to custom configuration file (future feature).
+
+```bash
+git-commit-agent --config ./custom-config.json
+```
+
+### Usage Examples
+
+#### Basic Usage
+
+```bash
+# Use all defaults
+git-commit-agent
+
+# Preview commit message without committing
+git-commit-agent --dry-run
+
+# Enable verbose output for debugging
+git-commit-agent --verbose
+```
+
+#### Commit Message Customization
+
+```bash
+# Force specific commit type and scope
+git-commit-agent --commit-type feat --scope auth
+
+# Brief commit message without file breakdown
+git-commit-agent --detail-level brief --no-file-breakdown
+
+# Detailed commit with longer subject line
+git-commit-agent --detail-level detailed --subject-max-length 100
+
+# Quick fix with minimal detail
+git-commit-agent --commit-type fix --detail-level brief
+```
+
+#### Staging Control
+
+```bash
+# Stage all files including untracked (default)
+git-commit-agent --auto-stage all
+
+# Only stage modified files
+git-commit-agent --auto-stage modified
+
+# Only commit already staged files
+git-commit-agent --auto-stage none
+```
+
+#### Advanced Workflows
+
+```bash
+# Complete workflow: stage all, commit, and push
+git-commit-agent --auto-stage all --allow-push
+
+# Skip pre-commit hooks
+git-commit-agent --no-verify
+
+# Dry run with verbose output to see what would happen
+git-commit-agent --dry-run --verbose
+
+# Feature commit with detailed breakdown
+git-commit-agent --commit-type feat --scope api --detail-level detailed
+```
+
+#### Team Workflows
+
+```bash
+# Consistent brief commits for the team
+git-commit-agent --detail-level brief --subject-max-length 50
+
+# Detailed commits for major features
+git-commit-agent --detail-level detailed --commit-type feat
+
+# Quick fixes without verification
+git-commit-agent --commit-type fix --no-verify --detail-level brief
+```
+
+### Configuration Presets
+
+#### Preset 1: Quick Commits
+For rapid development with minimal commit messages:
+
+```bash
+git-commit-agent --detail-level brief --no-file-breakdown
+```
+
+Or in `.env`:
+```env
+COMMIT_DETAIL_LEVEL=brief
+COMMIT_FILE_BREAKDOWN=false
+AUTO_STAGE=all
+```
+
+#### Preset 2: Detailed Documentation
+For comprehensive commit history:
+
+```bash
+git-commit-agent --detail-level detailed --file-breakdown --subject-max-length 72
+```
+
+Or in `.env`:
+```env
+COMMIT_DETAIL_LEVEL=detailed
+COMMIT_FILE_BREAKDOWN=true
+COMMIT_SUBJECT_MAX_LENGTH=72
+```
+
+#### Preset 3: CI/CD Pipeline
+For automated commits in CI/CD:
+
+```bash
+git-commit-agent --auto-stage all --no-verify --allow-push --detail-level normal
+```
+
+Or in `.env`:
+```env
+AUTO_STAGE=all
+SKIP_VERIFICATION=true
+ALLOW_PUSH=true
+COMMIT_DETAIL_LEVEL=normal
 ```
 
 ## Commit Message Format
@@ -185,89 +404,6 @@ improving user experience and reducing friction in the signup process.
 Closes #234
 ```
 
-## Documentation
-
--   [ENHANCEMENTS.md](./ENHANCEMENTS.md) - Technical documentation of enhancements
--   [COMMIT_PROMPT_GUIDE.md](./COMMIT_PROMPT_GUIDE.md) - Comprehensive commit message guide
-
-## Project Structure
-
-```
-git-commit-agent/
-├── src/
-│   ├── index.ts              # Main agent entry point
-│   ├── prompts.ts            # System and commit prompts
-│   ├── config/
-│   │   └── env-loader.ts    # Environment configuration
-│   ├── tools/
-│   │   └── git-master.tool.ts  # Master git command tool
-│   └── utils/
-│       ├── git-commands.ts  # Git command utilities
-│       ├── git-error.ts     # Error handling
-│       └── validators.ts    # Validation functions
-├── dist/                     # Compiled JavaScript (generated)
-├── .github/
-│   └── workflows/
-│       └── build-and-release.yml  # CI/CD pipeline
-├── package.json              # Project metadata and scripts
-├── tsconfig.json            # TypeScript configuration
-├── ENHANCEMENTS.md          # Technical documentation
-├── COMMIT_PROMPT_GUIDE.md   # Commit message guide
-└── README.md                # This file
-```
-
-## Development
-
-### Building
-
-```bash
-# Clean and build
-yarn build
-
-# Clean only
-yarn clean
-```
-
-### Scripts
-
-```bash
-yarn build          # Compile TypeScript
-yarn dev            # Watch mode
-yarn start          # Run the agent
-yarn go             # Clear console and run
-yarn clean          # Remove dist folder
-```
-
-## CI/CD
-
-The project includes a GitHub Actions workflow that:
-
-1. **Build & Test** - Runs on Node 18.x and 20.x
-2. **Release** - Creates GitHub releases on version tags
-3. **NPM Publishing** - Optional automated publishing to NPM
-
-### Creating a Release
-
-```bash
-# Tag a new version
-git tag v1.0.0
-git push origin v1.0.0
-
-# GitHub Actions will automatically:
-# - Build the project
-# - Run tests
-# - Create a GitHub release with artifacts
-# - (Optional) Publish to NPM
-```
-
-### Publishing to NPM
-
-To enable automatic NPM publishing:
-
-1. Add `NPM_TOKEN` secret to your GitHub repository
-2. Uncomment the publish line in `.github/workflows/build-and-release.yml`
-3. Push a version tag to trigger the release
-
 ## Troubleshooting
 
 ### "Not a git repository" Error
@@ -295,7 +431,40 @@ Make sure you have uncommitted changes:
 git status  # Check for changes
 ```
 
-### Build Errors
+### Commit message too long
+
+Reduce `--subject-max-length` or use `--detail-level brief`:
+
+```bash
+git-commit-agent --subject-max-length 50 --detail-level brief
+```
+
+### Wrong files staged
+
+Use `--auto-stage none` and manually stage files first:
+
+```bash
+git add file1.js file2.js
+git-commit-agent --auto-stage none
+```
+
+### Pre-commit hooks failing
+
+Use `--no-verify` to skip hooks (use cautiously):
+
+```bash
+git-commit-agent --no-verify
+```
+
+### Need to see what's happening
+
+Use `--verbose` and `--dry-run` together:
+
+```bash
+git-commit-agent --verbose --dry-run
+```
+
+### Build Errors (when installing from source)
 
 ```bash
 # Clear node_modules and reinstall
@@ -304,30 +473,35 @@ yarn install
 yarn build
 ```
 
-## Contributing
+## Tips and Best Practices
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+1. **Use `.env` for team defaults**: Set common configuration in `.env` and commit it to your repository
+2. **Override with CLI for special cases**: Use CLI arguments for one-off changes
+3. **Dry run first**: Use `--dry-run` to preview the commit message before committing
+4. **Verbose for debugging**: Enable `--verbose` when troubleshooting issues
+5. **Consistent subject length**: Stick to 72 characters for better GitHub display
+6. **Detail level by context**: Use `brief` for small changes, `detailed` for major features
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+## Documentation
+
+- **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Development guide, architecture, and contributing
+- **[ENHANCEMENTS.md](./ENHANCEMENTS.md)** - Technical documentation of enhancements
+- **[COMMIT_PROMPT_GUIDE.md](./COMMIT_PROMPT_GUIDE.md)** - Comprehensive commit message guide
 
 ## License
 
-ISC License - see LICENSE file for details
+ISC License - see LICENSE file for details.
 
 ## Acknowledgments
 
--   [LangChain](https://github.com/langchain-ai/langchainjs) - Framework for LLM applications
--   [OpenAI](https://openai.com/) - AI model provider
--   [Conventional Commits](https://www.conventionalcommits.org/) - Commit message specification
+- [LangChain](https://github.com/langchain-ai/langchainjs) - Framework for LLM applications
+- [OpenAI](https://openai.com/) - AI model provider
+- [Conventional Commits](https://www.conventionalcommits.org/) - Commit message specification
 
 ## Support
 
-For issues, questions, or contributions, please visit the [GitHub repository](https://github.com/yourusername/git-commit-agent).
+For issues, questions, or contributions, please visit the [GitHub repository](https://github.com/blendsdk/git-commit-agent).
 
 ---
 
-**Note:** Remember to replace `yourusername` with your actual GitHub username in URLs and configurations.
+**Note:** Remember to replace repository URLs with your actual GitHub repository.
