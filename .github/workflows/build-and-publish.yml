@@ -36,4 +36,4 @@ jobs:
                   git commit -m "chore: bump version to $(node -p "require('./package.json').version") [skip ci]"
                   git push
 
-            - run: npm publish
+            - run: npm publish --access public
