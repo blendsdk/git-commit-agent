@@ -42,8 +42,6 @@ git-commit-agent/
 │       └── build-and-release.yml    # CI/CD pipeline
 ├── package.json                      # Project metadata and scripts
 ├── tsconfig.json                     # TypeScript configuration
-├── ENHANCEMENTS.md                   # Technical documentation
-├── COMMIT_PROMPT_GUIDE.md           # Commit message guide
 ├── DEVELOPMENT.md                    # This file
 └── README.md                         # User-facing documentation
 ```
@@ -352,8 +350,6 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ### Additional Resources
 
-- **[ENHANCEMENTS.md](./ENHANCEMENTS.md)**: Detailed technical documentation of enhancements and architectural decisions
-- **[COMMIT_PROMPT_GUIDE.md](./COMMIT_PROMPT_GUIDE.md)**: Comprehensive guide on commit message generation and prompt engineering
 - **[README.md](./README.md)**: User-facing documentation and usage guide
 
 ### Key Technical Concepts

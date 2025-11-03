@@ -485,8 +485,6 @@ yarn build
 ## Documentation
 
 - **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Development guide, architecture, and contributing
-- **[ENHANCEMENTS.md](./ENHANCEMENTS.md)** - Technical documentation of enhancements
-- **[COMMIT_PROMPT_GUIDE.md](./COMMIT_PROMPT_GUIDE.md)** - Comprehensive commit message guide
 
 ## License
 
